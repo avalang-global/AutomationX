@@ -1,13 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { AppSystemProp } from '@activepieces/server-shared'
-import { isNil, Platform, SMTPInformation } from '@activepieces/shared'
+import { EmailSender, EmailTemplateData, isNil, Platform, SMTPInformation } from '@activepieces/shared'
 import { FastifyBaseLogger } from 'fastify'
 import Mustache from 'mustache'
 import nodemailer, { Transporter } from 'nodemailer'
 import { defaultTheme } from '../../flags/theme'
 import { system } from '../../helper/system/system'
 import { platformService } from '../../platform/platform.service'
-import { EmailSender, EmailTemplateData } from '.'
 
 
 type SMTPEmailSender = EmailSender & {

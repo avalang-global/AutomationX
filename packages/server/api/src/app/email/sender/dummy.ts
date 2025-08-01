@@ -1,5 +1,5 @@
+import { EmailSender } from '@activepieces/shared'
 import { FastifyBaseLogger } from 'fastify'
-import { EmailSender } from '.'
 
 export const dummyEmailSender = (log: FastifyBaseLogger): EmailSender => {
     return {
