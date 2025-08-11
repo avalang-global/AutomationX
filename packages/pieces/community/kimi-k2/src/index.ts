@@ -37,7 +37,7 @@ export const kimiAuth = PieceAuth.SecretText({
 
 export const kimiK2 = createPiece({
   displayName: 'Kimi AI',
-  description: 'Talk to Moonshot AI’s Kimi K2 model using your available PromptX credits.',
+  description: 'Talk to Moonshot AI’s Kimi K2 model.',
   auth: kimiAuth,
   minimumSupportedRelease: '0.66.1',
   logoUrl: 'https://promptxai.com/logos/kimi-logo.png',
