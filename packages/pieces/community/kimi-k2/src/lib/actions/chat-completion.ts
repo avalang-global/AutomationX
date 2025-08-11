@@ -14,9 +14,9 @@ import {
 } from '../common/common';
 export const chatCompletion = createAction({
   auth: kimiAuth,
-  name: 'chatCompletion',
-  displayName: 'chat completion',
-  description: 'kimi k2 chat completion',
+  name: 'kimiChatCompletion',
+  displayName: 'Ask Kimi K2',
+  description: 'Use Kimi`s chat completion API to ask anything you want',
   props: {
     model: Property.Dropdown({
       displayName: 'Model',
