@@ -1,5 +1,4 @@
-
-import { createPiece, PieceAuth } from "@activepieces/pieces-framework";
+import { createPiece, PieceAuth } from '@activepieces/pieces-framework';
 import {
   AuthenticationType,
   HttpMethod,
@@ -7,9 +6,10 @@ import {
 } from '@activepieces/pieces-common';
 import { PieceCategory } from '@activepieces/shared';
 import { chatCompletion } from './lib/actions/chat-completion';
-import { baseUrl } from "./lib/common/common";
+import { baseUrl } from './lib/common/common';
+
 export const kimiAuth = PieceAuth.SecretText({
-  displayName: 'KIMI K2 API Key',
+  displayName: 'Kimi K2 API Key',
   required: true,
   validate: async (auth) => {
     try {
@@ -34,14 +34,15 @@ export const kimiAuth = PieceAuth.SecretText({
     }
   },
 });
+
 export const kimiK2 = createPiece({
-      displayName: "Kimi-k2",
-      auth: kimiAuth,
-      minimumSupportedRelease: '0.36.1',
-      logoUrl: "https://promptxai.com/logos/kimi-logo.png",
-      categories: [PieceCategory.ARTIFICIAL_INTELLIGENCE],
-      authors: ['tumrabert'],
-      actions: [chatCompletion],
-      triggers: [],
-    });
-    
+  displayName: 'Kimi AI',
+  description: 'Talk to Moonshot AI’s Kimi K2 model using your available PromptX credits.',
+  auth: kimiAuth,
+  minimumSupportedRelease: '0.66.1',
+  logoUrl: 'https://promptxai.com/logos/kimi-logo.png',
+  categories: [PieceCategory.ARTIFICIAL_INTELLIGENCE],
+  authors: ['tumrabert'],
+  actions: [chatCompletion],
+  triggers: [],
+});

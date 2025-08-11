@@ -1,4 +1,8 @@
-import { createAction, Property,StoreScope, } from '@activepieces/pieces-framework';
+import {
+  createAction,
+  Property,
+  StoreScope,
+} from '@activepieces/pieces-framework';
 import OpenAI from 'openai';
 import { kimiAuth } from '../../index';
 import { z } from 'zod';
@@ -32,7 +36,7 @@ export const chatCompletion = createAction({
         try {
           const openai = new OpenAI({
             apiKey: auth as string,
-            baseURL: "https://api.moonshot.ai/v1",
+            baseURL: 'https://api.moonshot.ai/v1',
           });
           const response = await openai.models.list();
           const models = response.data;
@@ -47,7 +51,7 @@ export const chatCompletion = createAction({
             }),
           };
         } catch (error) {
-          console.log('Error fetching models:', error)
+          console.log('Error fetching models:', error);
           return {
             disabled: true,
             options: [],
@@ -85,14 +89,14 @@ export const chatCompletion = createAction({
       displayName: 'Frequency penalty',
       required: false,
       description:
-        "Frequency penalty, a number between -2.0 and 2.0. A positive value will penalize new tokens based on their existing frequency in the text, reducing the likelihood of the model repeating the same phrases verbatim",
+        'Frequency penalty, a number between -2.0 and 2.0. A positive value will penalize new tokens based on their existing frequency in the text, reducing the likelihood of the model repeating the same phrases verbatim',
       defaultValue: 0,
     }),
     presencePenalty: Property.Number({
       displayName: 'Presence penalty',
       required: false,
       description:
-        "Presence penalty, a number between -2.0 and 2.0. A positive value will penalize new tokens based on whether they appear in the text, increasing the likelihood of the model discussing new topics",
+        'Presence penalty, a number between -2.0 and 2.0. A positive value will penalize new tokens based on whether they appear in the text, increasing the likelihood of the model discussing new topics',
       defaultValue: 0,
     }),
     memoryKey: Property.ShortText({
@@ -117,7 +121,7 @@ export const chatCompletion = createAction({
     });
     const openai = new OpenAI({
       apiKey: auth,
-      baseURL: "https://api.moonshot.ai/v1",
+      baseURL: 'https://api.moonshot.ai/v1',
     });
     const {
       model,
