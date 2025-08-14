@@ -13,6 +13,7 @@ import { domainHelper } from '../helper/domain-helper'
 import { jwtUtils } from '../helper/jwt-utils'
 import { buildPaginator } from '../helper/pagination/build-paginator'
 import { paginationHelper } from '../helper/pagination/pagination-utils'
+import { system } from '../helper/system/system'
 import { platformService } from '../platform/platform.service'
 import { projectService } from '../project/project-service'
 import { projectMemberService } from '../project-member/project-member.service'
@@ -273,6 +274,14 @@ async function generateInvitationLink(userInvitation: UserInvitation, expireyInS
         key: await jwtUtils.getJwtSecret(),
     })
 
+    // If managed by PromptX, return zero public URL
+    if (!system.isStandaloneVersion()) {
+        return domainHelper.getZeroPublicUrl({
+            platformId: userInvitation.platformId,
+            path: `invitation?token=${token}&email=${encodeURIComponent(userInvitation.email)}`,
+        })
+    }
+
     return domainHelper.getPublicUrl({
         platformId: userInvitation.platformId,
         path: `invitation?token=${token}&email=${encodeURIComponent(userInvitation.email)}`,
@@ -290,14 +299,10 @@ const enrichWithInvitationLink = async (platform: Platform, userInvitation: User
     //     userInvitation,
     //     invitationLink,
     // })
-    // todo(Rupal): enable email service when it's fixed
-    return {
-        ...userInvitation,
-        link: invitationLink,
-    }
 
-    // await emailService(log).sendInvitation({ ...userInvitation, link: invitationLink })
-    // return userInvitation
+    await emailService(log).sendInvitation({ ...userInvitation, link: invitationLink })
+
+    return userInvitation
 }
 type ListUserParams = {
     platformId: string
