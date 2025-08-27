@@ -112,7 +112,7 @@ export const searchKnowledgeBase = createAction({
         }
       },
     }),
-    fetch_option: Property.StaticDropdown<string>({
+    fetchOption: Property.StaticDropdown<string>({
       displayName: 'Fetch Option',
       description: 'Choose retrieval granularity',
       required: true,
@@ -120,9 +120,9 @@ export const searchKnowledgeBase = createAction({
       options: {
         disabled: false,
         options: [
-          { label: 'filecontents', value: 'filecontents' },
-          { label: 'section', value: 'section' },
-          { label: 'chunk', value: 'chunk' },
+          { label: 'File Contents', value: 'filecontents' },
+          { label: 'Section', value: 'section' },
+          { label: 'Chunk', value: 'chunk' },
         ],
       },
     }),
@@ -131,7 +131,7 @@ export const searchKnowledgeBase = createAction({
       description: 'The query to search for in the knowledge base',
       required: true,
     }),
-    filter_tags: Property.Array({
+    filterTags: Property.Array({
       displayName: 'Filter Tags',
       description: 'Optional list of tags to filter by',
       required: false,
@@ -156,7 +156,7 @@ export const searchKnowledgeBase = createAction({
     }),
   },
   async run(context) {
-    const { query, knowledgeBaseId, fetch_option, filter_tags, topK, scoreThreshold } = context.propsValue;
+    const { query, knowledgeBaseId, fetchOption, filterTags, topK, scoreThreshold } = context.propsValue;
 
     try {
       const auth = context.auth;
@@ -164,11 +164,11 @@ export const searchKnowledgeBase = createAction({
       const accessToken = await getAccessToken(masterData.CENTER_AUTH_LOGIN_URL, auth) || '';
       const userMe = await getUserMe(masterData.CENTER_API_USERS_ME_URL, accessToken);
 
-      const tagArray: string[] = Array.isArray(filter_tags) ? filter_tags.map((t: any) => (t && typeof t.tag === 'string' ? t.tag.trim() : '')).filter((t: string) => t.length > 0) : [];
+      const tagArray: string[] = Array.isArray(filterTags) ? filterTags.map((t: any) => (t && typeof t.tag === 'string' ? t.tag.trim() : '')).filter((t: string) => t.length > 0) : [];
 
       const payload = {
         knowledge_id: knowledgeBaseId,
-        fetch_option: fetch_option,
+        fetch_option: fetchOption,
         query: query,
         filter_tags: tagArray,
         retrieval_setting: {
