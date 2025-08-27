@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { ImperativePanelHandle } from 'react-resizable-panels';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import {
   LeftSideBarType,
@@ -25,6 +26,7 @@ import { flowRunsApi } from '@/features/flow-runs/lib/flow-runs-api';
 import { piecesHooks } from '@/features/pieces/lib/pieces-hooks';
 import { flagsHooks } from '@/hooks/flags-hooks';
 import { platformHooks } from '@/hooks/platform-hooks';
+import { PromptMessage } from '@/features/flows/lib/prompt-flow-api';
 import {
   FlowActionType,
   ApEdition,
@@ -46,6 +48,7 @@ import { FlowVersionsList } from './flow-versions';
 import { FlowRunDetails } from './run-details';
 import { RunsList } from './run-list';
 import { StepSettingsContainer } from './step-settings';
+import { PromptToFlowSidebar } from './prompt-to-flow';
 
 const minWidthOfSidebar = 'min-w-[max(20vw,400px)]';
 const animateResizeClassName = `transition-all duration-200`;
@@ -87,9 +90,12 @@ const constructContainerKey = ({
   );
 };
 const BuilderPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { platform } = platformHooks.useCurrentPlatform();
   const [
     setRun,
+    setLeftSidebar,
     flowVersion,
     leftSidebar,
     rightSidebar,
@@ -98,6 +104,7 @@ const BuilderPage = () => {
     selectedStep,
   ] = useBuilderStateContext((state) => [
     state.setRun,
+    state.setLeftSidebar,
     state.flowVersion,
     state.leftSidebar,
     state.rightSidebar,
@@ -143,6 +150,25 @@ const BuilderPage = () => {
   const leftHandleRef = useAnimateSidebar(leftSidebar);
   const leftSidePanelRef = useRef<HTMLDivElement>(null);
   const rightSidePanelRef = useRef<HTMLDivElement>(null);
+
+  const messagesRef = useRef<PromptMessage[]>([]);
+  useEffect(() => {
+    if (!location.state || !Array.isArray(location.state.messages) || location.state.messages.length === 0) {
+      return;
+    }
+    messagesRef.current = location.state.messages as PromptMessage[]
+    setLeftSidebar(LeftSideBarType.PROMPT_TO_FLOW);
+  }, [location.state]);
+
+  useEffect(() => {
+    if (leftSidebar === LeftSideBarType.NONE && location.state?.messages?.length > 0) {
+      // Clear state
+      navigate(location.pathname, {
+        replace: true,
+        state: { ...location.state, messages: [] },
+      });
+    }
+  }, [leftSidebar]);
 
   const { pieceModel, refetch: refetchPiece } =
     piecesHooks.usePieceModelForStepSettings({
@@ -217,6 +243,7 @@ const BuilderPage = () => {
             {leftSidebar === LeftSideBarType.RUN_DETAILS && <FlowRunDetails />}
             {leftSidebar === LeftSideBarType.VERSIONS && <FlowVersionsList />}
             {leftSidebar === LeftSideBarType.AI_COPILOT && <CopilotSidebar />}
+            {leftSidebar === LeftSideBarType.PROMPT_TO_FLOW && <PromptToFlowSidebar initMessages={messagesRef.current} />}
           </div>
         </ResizablePanel>
         <ResizableHandle

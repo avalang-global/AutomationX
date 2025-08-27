@@ -7,8 +7,9 @@ import {
   Plus,
   Upload,
   Workflow,
+  Sparkles,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { DashboardPageHeader } from '@/components/custom/dashboard-page-header';
@@ -36,6 +37,8 @@ import { Permission, PopulatedFlow } from '@activepieces/shared';
 
 import { FlowsTable } from './flows-table';
 import { IssuesTable } from './issues-table';
+import PromptInput from '@/components/custom/prompt-input';
+import { promptFlowApi, PromptMessage, PromptMessageRoleEnum } from '@/features/flows/lib/prompt-flow-api';
 
 export enum FlowsPageTabs {
   HISTORY = 'history',
@@ -85,48 +88,53 @@ const FlowsPage = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4 w-full grow">
-      <DashboardPageHeader
-        tutorialTab="flows"
-        title={t('Flows')}
-        description={t(
-          'Create and manage your flows, run history and run issues',
+    <Tabs
+      value={activeTab}
+      onValueChange={(v) => handleTabChange(v as FlowsPageTabs)}
+      className="w-full"
+    >
+      <div className="flex flex-col gap-4 w-full grow">
+        <DashboardPageHeader
+          tutorialTab="flows"
+          title={t('Flows')}
+          description={t(
+            'Create and manage your flows, run history and run issues',
+          )}
+          middleChildren={
+            !embedState.hideFlowsPageNavbar && (
+              <TabsList variant="outline">
+                <TabsTrigger value={FlowsPageTabs.FLOWS} variant="outline">
+                  <Workflow className="h-4 w-4 mr-2" />
+                  {t('Flows')}
+                </TabsTrigger>
+                {checkAccess(Permission.READ_RUN) && (
+                  <TabsTrigger value={FlowsPageTabs.HISTORY} variant="outline">
+                    <History className="h-4 w-4 mr-2" />
+                    {t('Runs')}
+                  </TabsTrigger>
+                )}
+                {checkAccess(Permission.READ_ISSUES) && (
+                  <TabsTrigger value={FlowsPageTabs.ISSUES} variant="outline">
+                    <CircleAlert className="h-4 w-4 mr-2" />
+                    <span className="flex items-center gap-2">
+                      {t('Issues')}
+                      {showIssuesNotification && (
+                        <span className="ml-1 inline-block w-2 h-2 bg-red-500 rounded-full"></span>
+                      )}
+                    </span>
+                  </TabsTrigger>
+                )}
+              </TabsList>
+            )
+          }
+        >
+          {activeTab === FlowsPageTabs.FLOWS && <CreateFlowDropdown />}
+        </DashboardPageHeader>
+
+        {activeTab === FlowsPageTabs.FLOWS && (
+          <CreateFlowWithAI />
         )}
-      >
-        {activeTab === FlowsPageTabs.FLOWS && <CreateFlowDropdown />}
-      </DashboardPageHeader>
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => handleTabChange(v as FlowsPageTabs)}
-        className="w-full"
-      >
-        {!embedState.hideFlowsPageNavbar ? (
-          <TabsList variant="outline">
-            <TabsTrigger value={FlowsPageTabs.FLOWS} variant="outline">
-              <Workflow className="h-4 w-4 mr-2" />
-              {t('Flows')}
-            </TabsTrigger>
-            {checkAccess(Permission.READ_RUN) && (
-              <TabsTrigger value={FlowsPageTabs.HISTORY} variant="outline">
-                <History className="h-4 w-4 mr-2" />
-                {t('Runs')}
-              </TabsTrigger>
-            )}
-            {checkAccess(Permission.READ_ISSUES) && (
-              <TabsTrigger value={FlowsPageTabs.ISSUES} variant="outline">
-                <CircleAlert className="h-4 w-4 mr-2" />
-                <span className="flex items-center gap-2">
-                  {t('Issues')}
-                  {showIssuesNotification && (
-                    <span className="ml-1 inline-block w-2 h-2 bg-red-500 rounded-full"></span>
-                  )}
-                </span>
-              </TabsTrigger>
-            )}
-          </TabsList>
-        ) : (
-          <></>
-        )}
+
         <TabsContent value={FlowsPageTabs.FLOWS}>
           <FlowsTable />
         </TabsContent>
@@ -136,8 +144,8 @@ const FlowsPage = () => {
         <TabsContent value={FlowsPageTabs.ISSUES}>
           <IssuesTable />
         </TabsContent>
-      </Tabs>
-    </div>
+      </div>
+    </Tabs>
   );
 };
 
@@ -234,5 +242,72 @@ const CreateFlowDropdown = ({ refetch }: CreateFlowDropdownProps) => {
         </DropdownMenuContent>
       </DropdownMenu>
     </PermissionNeededTooltip>
+  );
+};
+
+const CreateFlowWithAI = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const [prompt, setPrompt] = useState('');
+  const messages = useRef<PromptMessage[]>([]);
+
+  const { mutate: sendMessage, isPending: isMessagePending } = useMutation<
+    { message: string, flowId: string },
+    Error,
+    void
+  >({
+    mutationFn: async () => {
+      const folderId = searchParams.get(folderIdParamName);
+      const folder =
+        folderId && folderId !== 'NULL'
+          ? await foldersApi.get(folderId)
+          : undefined;
+
+      const flow = await flowsApi.create({
+        projectId: authenticationSession.getProjectId()!,
+        displayName: t('Untitled'),
+        folderName: folder?.displayName,
+      });
+
+      const response = await promptFlowApi.chat(flow.id, messages.current);
+      return { message: response, flowId: flow.id };
+    },
+
+    onSuccess: (response) => {
+      const nextMessages = [
+        ...messages.current,
+        { role: 'assistant', content: response.message },
+      ];
+      navigate(
+        `/flows/${response.flowId}?${NEW_FLOW_QUERY_PARAM}=true`,
+        { state: { messages: nextMessages } },
+      );
+    },
+  });
+
+  const handleSubmit = async () => {
+    messages.current = [{ role: PromptMessageRoleEnum.user, content: prompt }];
+    sendMessage();
+  };
+
+  return (
+    <div className="mt-1 p-5 rounded-lg flex flex-col gap-5 bg-gray-100">
+      <h2 className="text-xl font-semibold flex items-center justify-center gap-2">
+        <Sparkles className="w-4 h-4" />
+        <span>Create your workflow with AI</span>
+      </h2>
+      <PromptInput
+        placeholder={t('Describe your automation flow (e.g., "Send welcome email to new users, add to CRM, and schedule follow-up task within 2 days")')}
+        className="w-full"
+        minRows={5}
+        maxRows={5}
+        value={prompt}
+        onChange={setPrompt}
+        onSubmit={handleSubmit}
+        disabled={isMessagePending}
+        loading={isMessagePending}
+      />
+    </div>
   );
 };
