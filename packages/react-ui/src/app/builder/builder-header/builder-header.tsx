@@ -1,6 +1,6 @@
 import { QuestionMarkCircledIcon } from '@radix-ui/react-icons';
 import { t } from 'i18next';
-import { ChevronDown, History, Logs } from 'lucide-react';
+import { ChevronDown, History, Logs, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   createSearchParams,
@@ -169,6 +169,14 @@ export const BuilderHeader = () => {
 
         <div className="grow"></div>
         <div className="flex items-center justify-center gap-4">
+          <Button
+            variant="ghost"
+            className="gap-2 px-2"
+            onClick={() => setLeftSidebar(LeftSideBarType.PROMPT_TO_FLOW)}
+          >
+            <Sparkles className="w-4 h-4"></Sparkles>
+            {t('AI Chat')}
+          </Button>
           {showSupport && (
             <Button
               variant="ghost"

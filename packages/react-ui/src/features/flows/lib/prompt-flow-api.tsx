@@ -13,7 +13,7 @@ type PromptMessageRole = Static<typeof PromptMessageRole>;
 const PromptMessage = Type.Object({
   role: PromptMessageRole, 
   content: Type.String(),
-  createdAt: Type.Optional(Type.String()),
+  createdAt: Type.Optional(Type.String()), // ISO string
 });
 
 export type PromptMessage = Static<typeof PromptMessage>;

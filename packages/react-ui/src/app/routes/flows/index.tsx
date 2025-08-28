@@ -32,7 +32,7 @@ import { foldersApi } from '@/features/folders/lib/folders-api';
 import { issueHooks } from '@/features/issues/hooks/issue-hooks';
 import { useAuthorization } from '@/hooks/authorization-hooks';
 import { authenticationSession } from '@/lib/authentication-session';
-import { NEW_FLOW_QUERY_PARAM } from '@/lib/utils';
+import { NEW_FLOW_QUERY_PARAM, NEW_FLOW_WITH_AI_QUERY_PARAM } from '@/lib/utils';
 import { Permission, PopulatedFlow } from '@activepieces/shared';
 
 import { FlowsTable } from './flows-table';
@@ -277,25 +277,29 @@ const CreateFlowWithAI = () => {
     onSuccess: (response) => {
       const nextMessages = [
         ...messages.current,
-        { role: 'assistant', content: response.message },
+        { role: PromptMessageRoleEnum.assistant, content: response.message, createdAt: new Date().toISOString() },
       ];
       navigate(
-        `/flows/${response.flowId}?${NEW_FLOW_QUERY_PARAM}=true`,
+        `/flows/${response.flowId}?${NEW_FLOW_QUERY_PARAM}=true&${NEW_FLOW_WITH_AI_QUERY_PARAM}=true`,
         { state: { messages: nextMessages } },
       );
     },
   });
 
   const handleSubmit = async () => {
-    messages.current = [{ role: PromptMessageRoleEnum.user, content: prompt }];
+    messages.current = [{ 
+      role: PromptMessageRoleEnum.user,
+      content: prompt,
+      createdAt: new Date().toISOString(),
+     }];
     sendMessage();
   };
 
   return (
-    <div className="mt-1 p-5 rounded-lg flex flex-col gap-5 bg-gray-100">
-      <h2 className="text-xl font-semibold flex items-center justify-center gap-2">
+    <div className="mt-1 p-4 rounded-lg flex flex-col gap-4 bg-gray-100">
+      <h2 className="text-lg font-medium flex items-center justify-center gap-2">
         <Sparkles className="w-4 h-4" />
-        <span>Create your workflow with AI</span>
+        <span>Create your flow with AI</span>
       </h2>
       <PromptInput
         placeholder={t('Describe your automation flow (e.g., "Send welcome email to new users, add to CRM, and schedule follow-up task within 2 days")')}

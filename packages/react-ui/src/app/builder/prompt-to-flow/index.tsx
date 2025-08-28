@@ -30,13 +30,11 @@ export const PromptToFlowSidebar = ({ initMessages }: { initMessages: PromptMess
   const [
     flow,
     setLeftSidebar,
-    leftSidebar,
     setFlow,
     setVersion,
   ] = useBuilderStateContext((state) => [
     state.flow,
     state.setLeftSidebar,
-    state.leftSidebar,
     state.setFlow,
     state.setVersion,
   ]);
@@ -105,8 +103,8 @@ export const PromptToFlowSidebar = ({ initMessages }: { initMessages: PromptMess
   };
 
   const handleCloseSidebar = () => {
-    handleUpdateLocationState([]);
-    setMessages([]);
+    // handleUpdateLocationState([]);
+    // setMessages([]);
     setLeftSidebar(LeftSideBarType.NONE);
   };
 
@@ -129,7 +127,6 @@ export const PromptToFlowSidebar = ({ initMessages }: { initMessages: PromptMess
   return (
     <div className="flex flex-col h-full">
       <SidebarHeader onClose={handleCloseSidebar}>
-        {/* {t('AI Copilot')} */}
         AutomationX
       </SidebarHeader>
       <div className="pt-0 p-4 flex flex-col flex-grow overflow-hidden">

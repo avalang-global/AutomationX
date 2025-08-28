@@ -39,7 +39,7 @@ import {
   isNil,
 } from '@activepieces/shared';
 
-import { cn, useElementSize } from '../../lib/utils';
+import { cn, NEW_FLOW_WITH_AI_QUERY_PARAM, useElementSize } from '../../lib/utils';
 
 import { BuilderHeader } from './builder-header/builder-header';
 import { CopilotSidebar } from './copilot';
@@ -156,19 +156,12 @@ const BuilderPage = () => {
     if (!location.state || !Array.isArray(location.state.messages) || location.state.messages.length === 0) {
       return;
     }
+    console.log('location.state.messages', location.state.messages);
     messagesRef.current = location.state.messages as PromptMessage[]
-    setLeftSidebar(LeftSideBarType.PROMPT_TO_FLOW);
-  }, [location.state]);
-
-  useEffect(() => {
-    if (leftSidebar === LeftSideBarType.NONE && location.state?.messages?.length > 0) {
-      // Clear state
-      navigate(location.pathname, {
-        replace: true,
-        state: { ...location.state, messages: [] },
-      });
+    if (location.search.includes(NEW_FLOW_WITH_AI_QUERY_PARAM)) {
+      setLeftSidebar(LeftSideBarType.PROMPT_TO_FLOW);
     }
-  }, [leftSidebar]);
+  }, [location.state]);
 
   const { pieceModel, refetch: refetchPiece } =
     piecesHooks.usePieceModelForStepSettings({
