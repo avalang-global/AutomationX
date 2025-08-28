@@ -305,7 +305,6 @@ const CreateFlowWithAI = () => {
         value={prompt}
         onChange={setPrompt}
         onSubmit={handleSubmit}
-        disabled={isMessagePending}
         loading={isMessagePending}
       />
     </div>

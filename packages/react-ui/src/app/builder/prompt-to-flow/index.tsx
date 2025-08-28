@@ -152,7 +152,6 @@ export const PromptToFlowSidebar = ({ initMessages }: { initMessages: PromptMess
           value={inputMessage}
           onChange={setInputMessage}
           onSubmit={handleSendMessage}
-          disabled={isPending}
           loading={isPending}
           placeholder={t('Describe your automation flow')}
           icon
