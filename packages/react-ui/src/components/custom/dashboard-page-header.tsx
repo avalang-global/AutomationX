@@ -11,16 +11,21 @@ export const DashboardPageHeader = ({
   children,
   description,
   beta = false,
+  middleChildren,
   tutorialTab,
 }: {
   title: string;
   children?: React.ReactNode;
   description?: React.ReactNode;
   beta?: boolean;
+  middleChildren?: React.ReactNode;
   tutorialTab?: TabType;
 }) => {
+  const className = !!middleChildren
+    ? 'grid grid-cols-3'
+    : 'flex justify-between';
   return (
-    <div className="w-full flex items-center justify-between border-b absolute left-0 top-0 bg-background py-3 px-6 z-30">
+    <div className={`w-full ${className} items-center border-b absolute left-0 top-0 bg-background py-3 px-6 z-30`}>
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold">{title}</h1>
@@ -41,7 +46,8 @@ export const DashboardPageHeader = ({
           <span className="text-sm text-muted-foreground">{description}</span>
         )}
       </div>
-      {children}
+      {middleChildren && <div className="flex justify-center">{middleChildren}</div>}
+      <div className="flex justify-end">{children}</div>
     </div>
   );
 };
