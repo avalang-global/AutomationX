@@ -1,7 +1,3 @@
-/**
- * This component is based on the CopilotMessage component in the builder/copilot/chat-message.tsx file.
- */
-
 import { flagsHooks } from '@/hooks/flags-hooks';
 import { formatUtils } from '@/lib/utils';
 import React, { forwardRef } from 'react';

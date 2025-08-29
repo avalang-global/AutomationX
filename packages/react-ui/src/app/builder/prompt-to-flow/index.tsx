@@ -1,7 +1,3 @@
-/**
- * This component is based on the CopilotSidebar component in the builder/copilot/index.tsx file.
- */
-
 import { useMutation } from '@tanstack/react-query';
 import { t } from 'i18next';
 import { useState, useRef, useEffect } from 'react';
@@ -18,11 +14,6 @@ import { ChatMessage } from './chat-message';
 import { PromptInput } from '@/components/custom/prompt-input';
 import { promptFlowApi, PromptMessage, PromptMessageRoleEnum } from '@/features/flows/lib/prompt-flow-api';
 import { flowsApi } from '@/features/flows/lib/flows-api';
-// import { LoadingMessage } from './loading-message';
-
-interface DefaultEventsMap {
-  [event: string]: (...args: any[]) => void;
-}
 
 export const PromptToFlowSidebar = ({ initMessages }: { initMessages: PromptMessage[] }) => {
   const [messages, setMessages] = useState<PromptMessage[]>(initMessages);
@@ -139,7 +130,6 @@ export const PromptToFlowSidebar = ({ initMessages }: { initMessages: PromptMess
                 ref={index === messages.length - 1 ? lastMessageRef : null}
               />
             ))}
-            {/* {isPending && <LoadingMessage></LoadingMessage>} */}
             <ScrollBar />
           </CardList>
         </ScrollArea>

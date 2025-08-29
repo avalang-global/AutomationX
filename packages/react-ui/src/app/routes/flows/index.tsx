@@ -7,9 +7,8 @@ import {
   Plus,
   Upload,
   Workflow,
-  Sparkles,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { DashboardPageHeader } from '@/components/custom/dashboard-page-header';
@@ -32,13 +31,12 @@ import { foldersApi } from '@/features/folders/lib/folders-api';
 import { issueHooks } from '@/features/issues/hooks/issue-hooks';
 import { useAuthorization } from '@/hooks/authorization-hooks';
 import { authenticationSession } from '@/lib/authentication-session';
-import { NEW_FLOW_QUERY_PARAM, NEW_FLOW_WITH_AI_QUERY_PARAM } from '@/lib/utils';
+import { NEW_FLOW_QUERY_PARAM } from '@/lib/utils';
 import { Permission, PopulatedFlow } from '@activepieces/shared';
 
 import { FlowsTable } from './flows-table';
 import { IssuesTable } from './issues-table';
-import PromptInput from '@/components/custom/prompt-input';
-import { promptFlowApi, PromptMessage, PromptMessageRoleEnum } from '@/features/flows/lib/prompt-flow-api';
+import { CreateFlowWithAI } from './flow-with-ai';
 
 export enum FlowsPageTabs {
   HISTORY = 'history',
@@ -242,75 +240,5 @@ const CreateFlowDropdown = ({ refetch }: CreateFlowDropdownProps) => {
         </DropdownMenuContent>
       </DropdownMenu>
     </PermissionNeededTooltip>
-  );
-};
-
-const CreateFlowWithAI = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-
-  const [prompt, setPrompt] = useState('');
-  const messages = useRef<PromptMessage[]>([]);
-
-  const { mutate: sendMessage, isPending: isMessagePending } = useMutation<
-    { message: string, flowId: string },
-    Error,
-    void
-  >({
-    mutationFn: async () => {
-      const folderId = searchParams.get(folderIdParamName);
-      const folder =
-        folderId && folderId !== 'NULL'
-          ? await foldersApi.get(folderId)
-          : undefined;
-
-      const flow = await flowsApi.create({
-        projectId: authenticationSession.getProjectId()!,
-        displayName: t('Untitled'),
-        folderName: folder?.displayName,
-      });
-
-      const response = await promptFlowApi.chat(flow.id, messages.current);
-      return { message: response, flowId: flow.id };
-    },
-
-    onSuccess: (response) => {
-      const nextMessages = [
-        ...messages.current,
-        { role: PromptMessageRoleEnum.assistant, content: response.message, createdAt: new Date().toISOString() },
-      ];
-      navigate(
-        `/flows/${response.flowId}?${NEW_FLOW_QUERY_PARAM}=true&${NEW_FLOW_WITH_AI_QUERY_PARAM}=true`,
-        { state: { messages: nextMessages } },
-      );
-    },
-  });
-
-  const handleSubmit = async () => {
-    messages.current = [{ 
-      role: PromptMessageRoleEnum.user,
-      content: prompt,
-      createdAt: new Date().toISOString(),
-     }];
-    sendMessage();
-  };
-
-  return (
-    <div className="mt-1 p-4 rounded-lg flex flex-col gap-4 bg-gray-100">
-      <h2 className="text-lg font-medium flex items-center justify-center gap-2">
-        <Sparkles className="w-4 h-4" />
-        <span>Create your flow with AI</span>
-      </h2>
-      <PromptInput
-        placeholder={t('Describe your automation flow (e.g., "Send welcome email to new users, add to CRM, and schedule follow-up task within 2 days")')}
-        className="w-full"
-        minRows={5}
-        maxRows={5}
-        value={prompt}
-        onChange={setPrompt}
-        onSubmit={handleSubmit}
-        loading={isMessagePending}
-      />
-    </div>
   );
 };
