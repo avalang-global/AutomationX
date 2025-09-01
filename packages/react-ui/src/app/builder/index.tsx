@@ -39,7 +39,11 @@ import {
   isNil,
 } from '@activepieces/shared';
 
-import { cn, NEW_FLOW_WITH_AI_QUERY_PARAM, useElementSize } from '../../lib/utils';
+import {
+  cn,
+  NEW_FLOW_WITH_AI_QUERY_PARAM,
+  useElementSize,
+} from '../../lib/utils';
 
 import { BuilderHeader } from './builder-header/builder-header';
 import { CopilotSidebar } from './copilot';
@@ -150,14 +154,18 @@ const BuilderPage = () => {
   const leftHandleRef = useAnimateSidebar(leftSidebar);
   const leftSidePanelRef = useRef<HTMLDivElement>(null);
   const rightSidePanelRef = useRef<HTMLDivElement>(null);
-
   const messagesRef = useRef<PromptMessage[]>([]);
+
   useEffect(() => {
-    if (!location.state || !Array.isArray(location.state.messages) || location.state.messages.length === 0) {
+    if (
+      !location.state ||
+      !Array.isArray(location.state.messages) ||
+      location.state.messages.length === 0
+    ) {
       return;
     }
     console.log('location.state.messages', location.state.messages);
-    messagesRef.current = location.state.messages as PromptMessage[]
+    messagesRef.current = location.state.messages as PromptMessage[];
     if (location.search.includes(NEW_FLOW_WITH_AI_QUERY_PARAM)) {
       setLeftSidebar(LeftSideBarType.PROMPT_TO_FLOW);
     }
@@ -236,7 +244,9 @@ const BuilderPage = () => {
             {leftSidebar === LeftSideBarType.RUN_DETAILS && <FlowRunDetails />}
             {leftSidebar === LeftSideBarType.VERSIONS && <FlowVersionsList />}
             {leftSidebar === LeftSideBarType.AI_COPILOT && <CopilotSidebar />}
-            {leftSidebar === LeftSideBarType.PROMPT_TO_FLOW && <PromptToFlowSidebar initMessages={messagesRef.current} />}
+            {leftSidebar === LeftSideBarType.PROMPT_TO_FLOW && (
+              <PromptToFlowSidebar initMessages={messagesRef.current} />
+            )}
           </div>
         </ResizablePanel>
         <ResizableHandle

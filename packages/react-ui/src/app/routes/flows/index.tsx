@@ -36,7 +36,7 @@ import { Permission, PopulatedFlow } from '@activepieces/shared';
 
 import { FlowsTable } from './flows-table';
 import { IssuesTable } from './issues-table';
-import { CreateFlowWithAI } from './flow-with-ai';
+import { CreateFlowWithAI } from './prompt-to-flow';
 
 export enum FlowsPageTabs {
   HISTORY = 'history',
@@ -129,9 +129,7 @@ const FlowsPage = () => {
           {activeTab === FlowsPageTabs.FLOWS && <CreateFlowDropdown />}
         </DashboardPageHeader>
 
-        {activeTab === FlowsPageTabs.FLOWS && (
-          <CreateFlowWithAI />
-        )}
+        {activeTab === FlowsPageTabs.FLOWS && <CreateFlowWithAI />}
 
         <TabsContent value={FlowsPageTabs.FLOWS}>
           <FlowsTable />

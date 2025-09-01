@@ -12,23 +12,28 @@ import { SidebarHeader } from '../sidebar-header';
 
 import { ChatMessage } from './chat-message';
 import { PromptInput } from '@/components/custom/prompt-input';
-import { promptFlowApi, PromptMessage, PromptMessageRoleEnum } from '@/features/flows/lib/prompt-flow-api';
+import {
+  promptFlowApi,
+  PromptMessage,
+  PromptMessageRoleEnum,
+} from '@/features/flows/lib/prompt-to-flow-api';
 import { flowsApi } from '@/features/flows/lib/flows-api';
 
-export const PromptToFlowSidebar = ({ initMessages }: { initMessages: PromptMessage[] }) => {
+export const PromptToFlowSidebar = ({
+  initMessages,
+}: {
+  initMessages: PromptMessage[];
+}) => {
   const [messages, setMessages] = useState<PromptMessage[]>(initMessages);
   const [inputMessage, setInputMessage] = useState('');
-  const [
-    flow,
-    setLeftSidebar,
-    setFlow,
-    setVersion,
-  ] = useBuilderStateContext((state) => [
-    state.flow,
-    state.setLeftSidebar,
-    state.setFlow,
-    state.setVersion,
-  ]);
+  const [flow, setLeftSidebar, setFlow, setVersion] = useBuilderStateContext(
+    (state) => [
+      state.flow,
+      state.setLeftSidebar,
+      state.setFlow,
+      state.setVersion,
+    ],
+  );
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -45,7 +50,10 @@ export const PromptToFlowSidebar = ({ initMessages }: { initMessages: PromptMess
       return promptFlowApi.chat(flow.id, messages);
     },
     onSuccess: async (response: string) => {
-      handleAddNewMessage({ role: PromptMessageRoleEnum.assistant, content: response });
+      handleAddNewMessage({
+        role: PromptMessageRoleEnum.assistant,
+        content: response,
+      });
       scrollToLastMessage();
       try {
         const freshFlow = await flowsApi.get(flow.id);
@@ -65,10 +73,13 @@ export const PromptToFlowSidebar = ({ initMessages }: { initMessages: PromptMess
 
   const handleAddNewMessage = (message: PromptMessage) => {
     setMessages((prevMessages) => {
-      const newMessages = [...prevMessages, {
-        ...message,
-        createdAt: new Date().toISOString(),
-      }];
+      const newMessages = [
+        ...prevMessages,
+        {
+          ...message,
+          createdAt: new Date().toISOString(),
+        },
+      ];
       handleUpdateLocationState(newMessages);
       return newMessages;
     });
@@ -87,7 +98,10 @@ export const PromptToFlowSidebar = ({ initMessages }: { initMessages: PromptMess
     if (trimmedInputMessage === '') {
       return;
     }
-    handleAddNewMessage({ role: PromptMessageRoleEnum.user, content: inputMessage });
+    handleAddNewMessage({
+      role: PromptMessageRoleEnum.user,
+      content: inputMessage,
+    });
     mutate(messages);
     setInputMessage('');
     scrollToLastMessage();
@@ -117,9 +131,7 @@ export const PromptToFlowSidebar = ({ initMessages }: { initMessages: PromptMess
 
   return (
     <div className="flex flex-col h-full">
-      <SidebarHeader onClose={handleCloseSidebar}>
-        AutomationX
-      </SidebarHeader>
+      <SidebarHeader onClose={handleCloseSidebar}>AutomationX</SidebarHeader>
       <div className="pt-0 p-4 flex flex-col flex-grow overflow-hidden">
         <ScrollArea className="flex-grow overflow-auto">
           <CardList className="pb-3 pr-3" listClassName="gap-6">
