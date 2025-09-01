@@ -588,6 +588,7 @@ export const createBuilderStore = (initialState: BuilderInitialState) =>
           stepName: getStepNameFromOperationType(operation, flowVersion),
           pieceSelectorItem,
           overrideDefaultSettings: overrideSettings,
+          customLogoUrl,
         });
         const isTrigger =
           defaultValues.type === FlowTriggerType.PIECE ||
@@ -624,7 +625,6 @@ export const createBuilderStore = (initialState: BuilderInitialState) =>
                 ...operation.actionLocation,
                 action: {
                   ...defaultValues,
-                  customLogoUrl,
                 },
               },
             });
@@ -658,9 +658,9 @@ export const createBuilderStore = (initialState: BuilderInitialState) =>
                 name: operation.stepName,
                 settings: {
                   ...defaultValues.settings,
+                  customLogoUrl,
                 },
                 valid: defaultValues.valid,
-                customLogoUrl,
               },
             });
             set(() => ({
