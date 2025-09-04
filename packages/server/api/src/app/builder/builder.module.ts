@@ -30,7 +30,7 @@ const UpdateBuilderFlowRequest = Type.Object({
     messages: Type.Array(Type.Object({
         role: Type.Union([Type.Literal('assistant'), Type.Literal('user')]),
         content: Type.String(),
-    }))
+    })),
 })
 
 const UpdateBuilderFlowRequestParams = {
