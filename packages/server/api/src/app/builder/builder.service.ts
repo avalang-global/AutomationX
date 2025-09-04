@@ -17,6 +17,7 @@ import { flowService } from '../flows/flow/flow.service'
 import { flowVersionService } from '../flows/flow-version/flow-version.service'
 import { domainHelper } from '../helper/domain-helper'
 import { system } from '../helper/system/system'
+import { platformPlanService } from '../platform-plan/platform-plan.service'
 import { buildBuilderTools } from './builder.tools'
 
 /*
@@ -169,6 +170,12 @@ export const builderService = (log: FastifyBaseLogger) => ({
             ],
             tools: buildBuilderTools({ userId, projectId, platformId, flowId, flowVersionId: flowVersion.id }),
         })
+
+        if (result.usage) {
+            log.info(result.usage, 'builder ai usage')
+            await platformPlanService(log).publishTokenUsage(projectId, result.usage)
+        }
+
         return result
     },
 })
