@@ -1,4 +1,3 @@
-import fs from 'node:fs'
 import { PrincipalType } from '@activepieces/shared'
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { StatusCodes } from 'http-status-codes'
@@ -10,12 +9,6 @@ export const builderModule: FastifyPluginAsyncTypebox = async (app) => {
 }
 
 const builderController: FastifyPluginAsyncTypebox = async (app) => {
-    app.get('/', BuilderRequestParams, async () => {
-        const filePath  = 'packages/server/api/src/app/builder/builder.html'
-        const stream = fs.createReadStream(filePath, 'utf8')
-        return stream
-    })
-
     app.post('/flow/:id', UpdateBuilderFlowRequestParams, async (request) => {
         const platformId = request.principal.platform.id
         const projectId = request.principal.projectId
@@ -29,7 +22,6 @@ const builderController: FastifyPluginAsyncTypebox = async (app) => {
             flowId: request.params.id,
             messages,
         })
-        // request.log.info({ steps: result.steps }, 'execution steps')
         return result.text
     })
 }
@@ -53,11 +45,5 @@ const UpdateBuilderFlowRequestParams = {
     },
     config: {
         allowedPrincipals: [PrincipalType.USER],
-    },
-}
-
-const BuilderRequestParams = {
-    config: {
-        allowedPrincipals: [PrincipalType.UNKNOWN],
     },
 }
