@@ -3,6 +3,7 @@ import { LanguageModelUsage } from 'ai'
 import axios from 'axios'
 import { FastifyBaseLogger } from 'fastify'
 import { authenticationUtils } from '../authentication/authentication-utils'
+import { BuilderOpenAiModel } from '../builder/builder.utils'
 import { system } from '../helper/system/system'
 
 type Quota = {
@@ -108,7 +109,7 @@ export const platformPlanService = (log: FastifyBaseLogger) => {
             }
             const projectUserToken = await authenticationUtils.getProjectOwnerAndToken(projectId)
             const tokenUsage: TokenUsage = {
-                model: 'gpt-4.1',
+                model: BuilderOpenAiModel,
                 component: 'AutomationX',
                 usage: {
                     inputTokens: usage.inputTokens,

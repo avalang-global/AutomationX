@@ -19,6 +19,7 @@ import { domainHelper } from '../helper/domain-helper'
 import { system } from '../helper/system/system'
 import { platformPlanService } from '../platform-plan/platform-plan.service'
 import { buildBuilderTools } from './builder.tools'
+import { BuilderOpenAiModel, BuilderToolName } from './builder.utils'
 
 /*
  * Strips a FlowVersion of unnecessary metadata before sending it to the AI model.
@@ -104,7 +105,7 @@ const userOpenAiModel = async (platformId: string, projectId: string): Promise<L
     const baseURL = await domainHelper.getPublicApiUrl({ path: '/v1/ai-providers/proxy/openai', platformId })
     const model = createAIModel({
         providerName: 'openai',
-        modelInstance: openai('gpt-4.1'),
+        modelInstance: openai(BuilderOpenAiModel),
         engineToken,
         baseURL,
         metadata: {
@@ -117,7 +118,7 @@ const userOpenAiModel = async (platformId: string, projectId: string): Promise<L
 const promptxOpenAiModel = async (): Promise<LanguageModelV2> => {
     const openAiKey = system.getOrThrow(AppSystemProp.PROMPTX_OPENAI_KEY)
     const provider = createOpenAI({ apiKey: openAiKey })
-    return provider('gpt-4.1')
+    return provider(BuilderOpenAiModel)
 }
 
 const selectOpenAiModel = async (platformId: string, projectId: string): Promise<LanguageModelV2> => {
@@ -147,9 +148,9 @@ export const builderService = (log: FastifyBaseLogger) => ({
             You have been provided with atomic tools to modify a flow by updating trigger and action steps.
 
             Here's what you should do
-            1. User may not provide fully qualified piece names, so you should first find pieceName and pieceVersion using the "list-pieces" tool
-            2. To find the correct actionName or triggerName for a given pieceName, use the "get-piece-information" tool
-            3. Identify where to add the required action by asking the user the "parentStepName" used in "add-action" tool
+            1. User may not provide fully qualified piece names, so you should first find pieceName and pieceVersion using the "${BuilderToolName.LIST_PIECES}" tool
+            2. To find the correct actionName or triggerName for a given pieceName, use the "${BuilderToolName.GET_PIECE_INFO}" tool
+            3. Identify where to add the required action by asking the user the "parentStepName" used in "${BuilderToolName.ADD_ACTION}" tool
 
             Important: If you're unsure of a pieceName, triggerName or parentStepName - please ask the user
             `

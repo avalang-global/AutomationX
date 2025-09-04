@@ -11,6 +11,17 @@ import {
     PropertySettings,
 } from '@activepieces/shared'
 
+export enum BuilderToolName {
+    LIST_PIECES = 'list-pieces',
+    GET_PIECE_INFO = 'get-piece-information',
+    UPDATE_TRIGGER = 'update-trigger',
+    ADD_ACTION = 'add-action',
+    UPDATE_ACTION = 'update-action',
+    REMOVE_ACTION = 'remove-action',
+}
+
+export const BuilderOpenAiModel = 'gpt-4.1'
+
 export const getDefaultPropertySettingsForActionOrTrigger = (
     actionOrTrigger: ActionBase | TriggerBase,
 ): Record<string, PropertySettings> => {

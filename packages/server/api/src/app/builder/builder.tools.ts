@@ -21,7 +21,7 @@ import { flowService } from '../flows/flow/flow.service'
 import { flowVersionService } from '../flows/flow-version/flow-version.service'
 import { system } from '../helper/system/system'
 import { pieceMetadataService } from '../pieces/piece-metadata-service'
-import { getDefaultPropertySettingsForActionOrTrigger, getInitalStepInputForActionOrTrigger } from './builder.utils'
+import { BuilderToolName, getDefaultPropertySettingsForActionOrTrigger, getInitalStepInputForActionOrTrigger } from './builder.utils'
 
 const log = system.globalLogger()
 
@@ -182,7 +182,7 @@ export const builderOperations = {
 
 export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowVersionId }: BuilderParams): Record<string, Tool> => {
     return {
-        'list-pieces': tool({
+        [BuilderToolName.LIST_PIECES]: tool({
             description: 'List all available pieces (and their names) with or without a search query',
             inputSchema: z.object({
                 searchQuery: z.string().optional(),
@@ -192,7 +192,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 return getAllPiecesSummary(params)
             },
         }),
-        'get-piece-information': tool({
+        [BuilderToolName.GET_PIECE_INFO]: tool({
             description: 'Fetch information of a given piece including metadata, actions and triggers',
             inputSchema: z.object({
                 pieceName: z.string(),
@@ -210,7 +210,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 })
             },
         }),
-        'update-trigger': tool({
+        [BuilderToolName.UPDATE_TRIGGER]: tool({
             description: 'update a flow trigger in workflow',
             inputSchema: z.object({
                 pieceName: z.string(),
@@ -255,7 +255,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 }
             },
         }),
-        'add-action': tool({
+        [BuilderToolName.ADD_ACTION]: tool({
             description: 'create a flow action in the workflow',
             inputSchema: z.object({
                 parentStepName: z.string({ description: 'Name of the parent node' }),
@@ -308,7 +308,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 }
             },
         }),
-        'update-action': tool({
+        [BuilderToolName.UPDATE_ACTION]: tool({
             description: 'update or replace a flow action in the workflow',
             inputSchema: z.object({
                 pieceName: z.string(),
@@ -349,7 +349,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 }
             },
         }),
-        'remove-action': tool({
+        [BuilderToolName.REMOVE_ACTION]: tool({
             description: 'remove flow action from the workflow',
             inputSchema: z.object({
                 actionNames: z.array(z.string()),
