@@ -19,11 +19,18 @@ import {
 } from '@/features/flows/lib/prompt-to-flow-api';
 import { flowsApi } from '@/features/flows/lib/flows-api';
 
+const WELCOME_MESSAGE = {
+  role: PromptMessageRoleEnum.assistant,
+  content: "Hello! How can I help you today?\nYou can type the changes you'd like for this flow, and I'll help you create or modify it",
+  createdAt: new Date().toISOString(),
+}
+
 export const PromptToFlowSidebar = ({
   initMessages,
 }: {
   initMessages: PromptMessage[];
 }) => {
+  const [isShowWelcomeMessage, setIsShowWelcomeMessage] = useState(false);
   const [messages, setMessages] = useState<PromptMessage[]>(initMessages);
   const [inputMessage, setInputMessage] = useState('');
   const [flow, setLeftSidebar, setFlow, setVersion] = useBuilderStateContext(
@@ -72,17 +79,13 @@ export const PromptToFlowSidebar = ({
   });
 
   const handleAddNewMessage = (message: PromptMessage) => {
-    setMessages((prevMessages) => {
-      const newMessages = [
-        ...prevMessages,
-        {
-          ...message,
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      handleUpdateLocationState(newMessages);
-      return newMessages;
-    });
+    const messagesToUpdate = [...messages, {
+      ...message,
+      createdAt: new Date().toISOString(),
+    }];
+    setMessages(messagesToUpdate);
+    handleUpdateLocationState(messagesToUpdate);
+    return messagesToUpdate;
   };
 
   const handleUpdateLocationState = (messages: PromptMessage[]) => {
@@ -98,7 +101,7 @@ export const PromptToFlowSidebar = ({
     if (trimmedInputMessage === '') {
       return;
     }
-    handleAddNewMessage({
+    const messages = handleAddNewMessage({
       role: PromptMessageRoleEnum.user,
       content: inputMessage,
     });
@@ -119,6 +122,9 @@ export const PromptToFlowSidebar = ({
     if (textAreaRef.current) {
       textAreaRef.current.focus();
     }
+    if (messages.length === 0) {
+      setIsShowWelcomeMessage(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -135,6 +141,10 @@ export const PromptToFlowSidebar = ({
       <div className="pt-0 p-4 flex flex-col flex-grow overflow-hidden">
         <ScrollArea className="flex-grow overflow-auto">
           <CardList className="pb-3 pr-3" listClassName="gap-6">
+            {isShowWelcomeMessage && (
+              <ChatMessage message={WELCOME_MESSAGE} />
+            )}
+
             {messages.map((message, index) => (
               <ChatMessage
                 key={index}
