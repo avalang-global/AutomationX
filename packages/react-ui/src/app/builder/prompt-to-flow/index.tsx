@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { t } from 'i18next';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { CardList } from '@/components/custom/card-list';
@@ -19,11 +19,7 @@ import {
 } from '@/features/flows/lib/prompt-to-flow-api';
 import { flowsApi } from '@/features/flows/lib/flows-api';
 
-const WELCOME_MESSAGE = {
-  role: PromptMessageRoleEnum.assistant,
-  content: "Hello! How can I help you today?\nYou can type the changes you'd like for this flow, and I'll help you create or modify it",
-  createdAt: new Date().toISOString(),
-}
+const WELCOME_MESSAGE = "Hello! How can I help you today?\nYou can type the changes you'd like for this flow, and I'll help you create or modify it"
 
 export const PromptToFlowSidebar = ({
   initMessages,
@@ -135,6 +131,14 @@ export const PromptToFlowSidebar = ({
     }
   }, [messages]);
 
+  const welcomeMessage = useMemo(() => {
+    return {
+      role: PromptMessageRoleEnum.assistant,
+      content: WELCOME_MESSAGE,
+      createdAt: new Date().toISOString(),
+    };
+  }, [])
+
   return (
     <div className="flex flex-col h-full">
       <SidebarHeader onClose={handleCloseSidebar}>AutomationX</SidebarHeader>
@@ -142,7 +146,7 @@ export const PromptToFlowSidebar = ({
         <ScrollArea className="flex-grow overflow-auto">
           <CardList className="pb-3 pr-3" listClassName="gap-6">
             {isShowWelcomeMessage && (
-              <ChatMessage message={WELCOME_MESSAGE} />
+              <ChatMessage message={welcomeMessage} />
             )}
 
             {messages.map((message, index) => (
