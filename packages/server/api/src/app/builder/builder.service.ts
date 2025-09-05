@@ -1,4 +1,5 @@
 import { AIUsageFeature, createAIModel } from '@activepieces/common-ai'
+import { AppSystemProp } from '@activepieces/server-shared'
 import {
     assertNotNullOrUndefined,
     FlowAction,
@@ -7,14 +8,18 @@ import {
     FlowVersion,
     FlowVersionState,
 } from '@activepieces/shared'
-import { openai } from '@ai-sdk/openai'
+import { createOpenAI, openai } from '@ai-sdk/openai'
+import { LanguageModelV2 } from '@ai-sdk/provider'
 import { generateText, GenerateTextResult, stepCountIs } from 'ai'
 import { FastifyBaseLogger } from 'fastify'
 import { accessTokenManager } from '../authentication/lib/access-token-manager'
 import { flowService } from '../flows/flow/flow.service'
 import { flowVersionService } from '../flows/flow-version/flow-version.service'
 import { domainHelper } from '../helper/domain-helper'
+import { system } from '../helper/system/system'
+import { platformPlanService } from '../platform-plan/platform-plan.service'
 import { buildBuilderTools } from './builder.tools'
+import { BuilderOpenAiModel, BuilderToolName } from './builder.utils'
 
 /*
  * Strips a FlowVersion of unnecessary metadata before sending it to the AI model.
@@ -92,6 +97,36 @@ const stripFlowVersionForAiPrompt = (flowVersion: FlowVersion): string => {
     return JSON.stringify(rest, null, 2)
 }
 
+const userOpenAiModel = async (platformId: string, projectId: string): Promise<LanguageModelV2> => {
+    const engineToken = await accessTokenManager.generateEngineToken({
+        projectId,
+        platformId,
+    })
+    const baseURL = await domainHelper.getPublicApiUrl({ path: '/v1/ai-providers/proxy/openai', platformId })
+    const model = createAIModel({
+        providerName: 'openai',
+        modelInstance: openai(BuilderOpenAiModel),
+        engineToken,
+        baseURL,
+        metadata: {
+            feature: AIUsageFeature.TEXT_AI,
+        },
+    })
+    return model
+}
+
+const promptxOpenAiModel = async (): Promise<LanguageModelV2> => {
+    const openAiKey = system.getOrThrow(AppSystemProp.PROMPTX_OPENAI_KEY)
+    const provider = createOpenAI({ apiKey: openAiKey })
+    return provider(BuilderOpenAiModel)
+}
+
+const selectOpenAiModel = async (platformId: string, projectId: string): Promise<LanguageModelV2> => {
+    if (system.isStandaloneVersion()) {
+        return userOpenAiModel(platformId, projectId)
+    }
+    return promptxOpenAiModel()
+}
 
 export const builderService = (log: FastifyBaseLogger) => ({
     async runAndUpdate({ userId, projectId, platformId, flowId, messages }: RunParams): Promise<GenerateTextResult<ReturnType<typeof buildBuilderTools>, string>> {
@@ -102,11 +137,6 @@ export const builderService = (log: FastifyBaseLogger) => ({
         const flowVersion = await flowVersionService(log).getLatestVersion(flowId, FlowVersionState.DRAFT)
         assertNotNullOrUndefined(flowVersion, 'No draft flow version found')
 
-        const engineToken = await accessTokenManager.generateEngineToken({
-            projectId,
-            platformId,
-        })
-        const baseURL = await domainHelper.getPublicApiUrl({ path: '/v1/ai-providers/proxy/openai', platformId })
         const system = `You are a workflow builder agent.
 
             A workflow or "flow" consists of "steps" which integrate to external services called "pieces".
@@ -118,9 +148,9 @@ export const builderService = (log: FastifyBaseLogger) => ({
             You have been provided with atomic tools to modify a flow by updating trigger and action steps.
 
             Here's what you should do
-            1. User may not provide fully qualified piece names, so you should first find pieceName and pieceVersion using the "list-pieces" tool
-            2. To find the correct actionName or triggerName for a given pieceName, use the "get-piece-information" tool
-            3. Identify where to add the required action by asking the user the "parentStepName" used in "add-action" tool
+            1. User may not provide fully qualified piece names, so you should first find pieceName and pieceVersion using the "${BuilderToolName.LIST_PIECES}" tool
+            2. To find the correct actionName or triggerName for a given pieceName, use the "${BuilderToolName.GET_PIECE_INFO}" tool
+            3. Identify where to add the required action by asking the user the "parentStepName" used in "${BuilderToolName.ADD_ACTION}" tool
 
             Important: If you're unsure of a pieceName, triggerName or parentStepName - please ask the user
             `
@@ -131,15 +161,7 @@ export const builderService = (log: FastifyBaseLogger) => ({
 
             ${stripFlowVersionForAiPrompt(flowVersion)}
             `
-        const model = createAIModel({
-            providerName: 'openai',
-            modelInstance: openai('gpt-4.1'),
-            engineToken,
-            baseURL,
-            metadata: {
-                feature: AIUsageFeature.TEXT_AI,
-            },
-        })
+        const model = await selectOpenAiModel(platformId, projectId)
         const result = await generateText({
             model,
             stopWhen: stepCountIs(10),
@@ -149,6 +171,12 @@ export const builderService = (log: FastifyBaseLogger) => ({
             ],
             tools: buildBuilderTools({ userId, projectId, platformId, flowId, flowVersionId: flowVersion.id }),
         })
+
+        if (result.usage) {
+            log.info(result.usage, 'builder ai usage')
+            await platformPlanService(log).publishTokenUsage(projectId, result.usage)
+        }
+
         return result
     },
 })

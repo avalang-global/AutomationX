@@ -21,6 +21,7 @@ import { flowService } from '../flows/flow/flow.service'
 import { flowVersionService } from '../flows/flow-version/flow-version.service'
 import { system } from '../helper/system/system'
 import { pieceMetadataService } from '../pieces/piece-metadata-service'
+import { BuilderToolName, getDefaultPropertySettingsForActionOrTrigger, getInitalStepInputForActionOrTrigger } from './builder.utils'
 
 const log = system.globalLogger()
 
@@ -181,7 +182,7 @@ export const builderOperations = {
 
 export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowVersionId }: BuilderParams): Record<string, Tool> => {
     return {
-        'list-pieces': tool({
+        [BuilderToolName.LIST_PIECES]: tool({
             description: 'List all available pieces (and their names) with or without a search query',
             inputSchema: z.object({
                 searchQuery: z.string().optional(),
@@ -191,7 +192,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 return getAllPiecesSummary(params)
             },
         }),
-        'get-piece-information': tool({
+        [BuilderToolName.GET_PIECE_INFO]: tool({
             description: 'Fetch information of a given piece including metadata, actions and triggers',
             inputSchema: z.object({
                 pieceName: z.string(),
@@ -209,7 +210,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 })
             },
         }),
-        'update-trigger': tool({
+        [BuilderToolName.UPDATE_TRIGGER]: tool({
             description: 'update a flow trigger in workflow',
             inputSchema: z.object({
                 pieceName: z.string(),
@@ -221,17 +222,23 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 if (!pieceName.startsWith('@')) {
                     throw new Error('Invalid piece name. Piece names must begin with "@"')
                 }
+                const pieceMetadata = await getPieceMetadataByName({ name: pieceName, version: pieceVersion, platformId, projectId })
+                const pieceTrigger = pieceMetadata.triggers[pieceTriggerName]
+                const input = getInitalStepInputForActionOrTrigger(pieceTrigger)
+                const propertySettings = getDefaultPropertySettingsForActionOrTrigger(pieceTrigger)
+                log.debug(input, 'piece trigger input')
+                log.debug(propertySettings, 'piece trigger propertySettings')
                 const request: PieceTrigger = {
                     name: 'trigger',
                     valid: true,
-                    displayName: pieceTriggerName,
+                    displayName: pieceTrigger.displayName,
                     type: FlowTriggerType.PIECE,
                     settings: {
                         pieceName,
                         pieceVersion,
-                        input: {},
-                        propertySettings: {},
-                        triggerName: pieceTriggerName.toLowerCase().replace(' ', '-'),
+                        input,
+                        propertySettings,
+                        triggerName: pieceTriggerName,
                     },
                 }
                 await builderOperations.updateTrigger({
@@ -248,11 +255,11 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 }
             },
         }),
-        'add-action': tool({
+        [BuilderToolName.ADD_ACTION]: tool({
             description: 'create a flow action in the workflow',
             inputSchema: z.object({
                 parentStepName: z.string({ description: 'Name of the parent node' }),
-                stepName: z.string({ description: 'Unique name of the step (step-1, step-2 etc' }),
+                stepName: z.string({ description: 'Unique name of the step (step_1, step_2 etc' }),
                 pieceName: z.string(),
                 pieceVersion: z.string(),
                 pieceActionName: z.string(),
@@ -263,6 +270,12 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 if (!pieceName.startsWith('@')) {
                     throw new Error('Invalid piece name. Piece names must begin with "@"')
                 }
+                const metadata = await pieceMetadataService(log).getOrThrow({ name: pieceName, version: pieceVersion, platformId, projectId })
+                const pieceAction = metadata?.actions[pieceActionName]
+                const input = getInitalStepInputForActionOrTrigger(pieceAction)
+                const propertySettings = getDefaultPropertySettingsForActionOrTrigger(pieceAction)
+                log.debug(input, 'piece action input')
+                log.debug(propertySettings, 'piece action propertySettings')
                 const request: AddActionRequest = {
                     parentStep: parentStepName,
                     stepLocationRelativeToParent: StepLocationRelativeToParent.AFTER,
@@ -270,13 +283,13 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                         valid: true,
                         type: FlowActionType.PIECE,
                         name: stepName,
-                        displayName: pieceActionName,
+                        displayName: pieceAction.displayName,
                         settings: {
                             pieceName,
                             pieceVersion,
                             actionName: pieceActionName,
-                            input: {},
-                            propertySettings: {},
+                            input,
+                            propertySettings,
                             errorHandlingOptions: {},
                         },
                     },
@@ -295,7 +308,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 }
             },
         }),
-        'update-action': tool({
+        [BuilderToolName.UPDATE_ACTION]: tool({
             description: 'update or replace a flow action in the workflow',
             inputSchema: z.object({
                 pieceName: z.string(),
@@ -336,7 +349,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 }
             },
         }),
-        'remove-action': tool({
+        [BuilderToolName.REMOVE_ACTION]: tool({
             description: 'remove flow action from the workflow',
             inputSchema: z.object({
                 actionNames: z.array(z.string()),
