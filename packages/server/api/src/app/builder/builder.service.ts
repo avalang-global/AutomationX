@@ -154,6 +154,13 @@ export const builderService = (log: FastifyBaseLogger) => ({
                 { role: 'system', content: systemWithFlowPrompt },
                 ...messages,
             ],
+            prepareStep: async ({ stepNumber, messages }) => {
+                // Ensure only last 10 messages are fed into history in initial call
+                if (stepNumber === 0) {
+                    return { messages: messages.slice(-10) }
+                }
+                return {}
+            },
             tools: buildBuilderTools({ userId, projectId, platformId, flow, flowVersion }),
         })
 
