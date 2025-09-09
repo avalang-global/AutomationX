@@ -9,6 +9,7 @@ import {
     isNil,
     PropertyExecutionType,
     PropertySettings,
+    Step,
 } from '@activepieces/shared'
 
 export enum BuilderToolName {
@@ -16,11 +17,29 @@ export enum BuilderToolName {
     GET_PIECE_INFO = 'get-piece-information',
     UPDATE_TRIGGER = 'update-trigger',
     ADD_ACTION = 'add-action',
-    UPDATE_ACTION = 'update-action',
+    MOVE_ACTION = 'move-action',
     REMOVE_ACTION = 'remove-action',
+    ADD_ROUTER = 'add-router',
+    ADD_BRANCH = 'add-branch',
+    REMOVE_BRANCH = 'remove-branch',
 }
 
-export const BuilderOpenAiModel = 'gpt-4.1'
+export const BuilderOpenAiModel = 'gpt-5-mini'
+
+export const validatePieceNameOrThrow = (pieceName: string): void => {
+    if (!pieceName.startsWith('@')) {
+        throw new Error('Invalid piece name. Piece names must begin with "@"')
+    }
+}
+
+export const findBranchIndexFromNameInRouter = (router: Step, branchName: string): number | undefined => {
+    for (let i = 0; i < router.settings.branches.length; i++) {
+        if (router.settings.branches[i].branchName === branchName) {
+            return i
+        }
+    }
+    return
+}
 
 export const getDefaultPropertySettingsForActionOrTrigger = (
     actionOrTrigger: ActionBase | TriggerBase,

@@ -62,32 +62,35 @@ import { BuilderOpenAiModel, BuilderToolName } from './builder.utils'
  */
 const stripFlowVersionForAiPrompt = (flowVersion: FlowVersion): string => {
     // Traverse the flow structure and clean each step
-    const minimalFlowVersion = flowStructureUtil.transferFlow(flowVersion, (step) => {
-        const cleaned = { ...step }
+    const minimalFlowVersion = flowStructureUtil.transferFlow(
+        flowVersion,
+        (step) => {
+            const cleaned = { ...step }
 
-        // Remove unneeded step settings metadata
-        if (cleaned.settings) {
-            delete cleaned.settings.errorHandlingOptions
-            delete cleaned.settings.inputUiInfo
-            delete cleaned.settings.connectionIds
-            delete cleaned.settings.agentIds
-            delete cleaned.settings.input
-            delete cleaned.settings.inputUiInfo // duplicate remove to be safe
-        }
+            // Remove unneeded step settings metadata
+            if (cleaned.settings) {
+                delete cleaned.settings.errorHandlingOptions
+                delete cleaned.settings.inputUiInfo
+                delete cleaned.settings.connectionIds
+                delete cleaned.settings.agentIds
+                delete cleaned.settings.input
+                delete cleaned.settings.inputUiInfo // duplicate remove to be safe
+            }
 
-        // Remove extra fields from triggers
-        if (flowStructureUtil.isTrigger(cleaned.type)) {
-            delete (cleaned as Partial<FlowTrigger>).displayName
-        }
+            // Remove extra fields from triggers
+            if (flowStructureUtil.isTrigger(cleaned.type)) {
+                delete (cleaned as Partial<FlowTrigger>).displayName
+            }
 
-        // Remove extra fields from actions
-        if (flowStructureUtil.isAction(cleaned.type)) {
-            delete (cleaned as Partial<FlowAction>).valid
-            delete (cleaned as Partial<FlowAction>).displayName
-        }
+            // Remove extra fields from actions
+            if (flowStructureUtil.isAction(cleaned.type)) {
+                delete (cleaned as Partial<FlowAction>).valid
+                delete (cleaned as Partial<FlowAction>).displayName
+            }
 
-        return cleaned
-    })
+            return cleaned
+        },
+    )
 
     // Remove top-level metadata that’s irrelevant to the AI
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -102,7 +105,10 @@ const userOpenAiModel = async (platformId: string, projectId: string): Promise<L
         projectId,
         platformId,
     })
-    const baseURL = await domainHelper.getPublicApiUrl({ path: '/v1/ai-providers/proxy/openai', platformId })
+    const baseURL = await domainHelper.getPublicApiUrl({
+        path: '/v1/ai-providers/proxy/openai',
+        platformId,
+    })
     const model = createAIModel({
         providerName: 'openai',
         modelInstance: openai(BuilderOpenAiModel),
@@ -130,37 +136,43 @@ const selectOpenAiModel = async (platformId: string, projectId: string): Promise
 
 export const builderService = (log: FastifyBaseLogger) => ({
     async runAndUpdate({ userId, projectId, platformId, flowId, messages }: RunParams): Promise<GenerateTextResult<ReturnType<typeof buildBuilderTools>, string>> {
-        await flowService(log).getOneOrThrow({
+        const flow = await flowService(log).getOneOrThrow({
             projectId,
             id: flowId,
         })
         const flowVersion = await flowVersionService(log).getLatestVersion(flowId, FlowVersionState.DRAFT)
         assertNotNullOrUndefined(flowVersion, 'No draft flow version found')
 
-        const system = `You are a workflow builder agent.
+        const system = `
+You are a workflow builder agent.
 
-            A workflow or "flow" consists of "steps" which integrate to external services called "pieces".
-            A piece can have multiple triggers and actions.
-            A flow consists of one trigger step and multiple action steps beneath it.
-            A flow is represented in JSON format.
-            A trigger step should always be named "trigger" whereas action step names must be unique in a flow and simple (ex. "step_1", "step_2" etc)
+A workflow or "flow" consists of "steps" which integrate to external services called "pieces"
+A piece can have multiple triggers and actions
+A flow consists of one trigger step and multiple action steps beneath it
+A flow is represented in JSON format
+A trigger step should always be named "trigger" whereas action step names must be unique in a flow and simple (ex. "step_1", "step_2" etc)
 
-            You have been provided with atomic tools to modify a flow by updating trigger and action steps.
+You have been provided with atomic tools to modify a flow by updating trigger and action steps.
 
-            Here's what you should do
-            1. User may not provide fully qualified piece names, so you should first find pieceName and pieceVersion using the "${BuilderToolName.LIST_PIECES}" tool
-            2. To find the correct actionName or triggerName for a given pieceName, use the "${BuilderToolName.GET_PIECE_INFO}" tool
-            3. Identify where to add the required action by asking the user the "parentStepName" used in "${BuilderToolName.ADD_ACTION}" tool
+Here's what you should do
+1. User may not provide fully qualified piece names, so you should first find pieceName and pieceVersion using the "${BuilderToolName.LIST_PIECES}" tool
+2. To find the correct actionName or triggerName for a given pieceName, use the "${BuilderToolName.GET_PIECE_INFO}" tool
+3. To add a new action step, ensure the following before calling "${BuilderToolName.ADD_ACTION}" tool
+    3.1. "parentStepName" will be the immediate step after which this is to be added - this can be action steps or router
+    3.2. If "parentStepName" is a router, check if user needs to add to a particular branch "branchName"
+4. Avoid asking input details for each step as user will add those themselves
 
-            Important: If you're unsure of a pieceName, triggerName or parentStepName - please ask the user
-            `
+Important: If you're unsure of a pieceName, triggerName or parentStepName - please ask the user in a human friendly format
+`
+
         const systemWithFlowPrompt = `
-            ${system}
+${system}
 
-            Here's the current flow:
+Here's the current flow:
 
-            ${stripFlowVersionForAiPrompt(flowVersion)}
-            `
+${stripFlowVersionForAiPrompt(flowVersion)}
+`
+        log.info(systemWithFlowPrompt)
         const model = await selectOpenAiModel(platformId, projectId)
         const result = await generateText({
             model,
@@ -169,7 +181,7 @@ export const builderService = (log: FastifyBaseLogger) => ({
                 { role: 'system', content: systemWithFlowPrompt },
                 ...messages,
             ],
-            tools: buildBuilderTools({ userId, projectId, platformId, flowId, flowVersionId: flowVersion.id }),
+            tools: buildBuilderTools({ userId, projectId, platformId, flow, flowVersion }),
         })
 
         if (result.usage) {
