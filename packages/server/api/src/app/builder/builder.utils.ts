@@ -12,20 +12,6 @@ import {
     Step,
 } from '@activepieces/shared'
 
-export enum BuilderToolName {
-    LIST_PIECES = 'list-pieces',
-    GET_PIECE_INFO = 'get-piece-information',
-    UPDATE_TRIGGER = 'update-trigger',
-    ADD_ACTION = 'add-action',
-    MOVE_ACTION = 'move-action',
-    REMOVE_ACTION = 'remove-action',
-    ADD_ROUTER = 'add-router',
-    ADD_BRANCH = 'add-branch',
-    REMOVE_BRANCH = 'remove-branch',
-}
-
-export const BuilderOpenAiModel = 'gpt-5-mini'
-
 export const validatePieceNameOrThrow = (pieceName: string): void => {
     if (!pieceName.startsWith('@')) {
         throw new Error('Invalid piece name. Piece names must begin with "@"')

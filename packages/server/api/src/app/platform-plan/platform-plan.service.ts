@@ -3,7 +3,7 @@ import { LanguageModelUsage } from 'ai'
 import axios from 'axios'
 import { FastifyBaseLogger } from 'fastify'
 import { authenticationUtils } from '../authentication/authentication-utils'
-import { BuilderOpenAiModel } from '../builder/builder.utils'
+import { BuilderOpenAiModel } from '../builder/constants'
 import { system } from '../helper/system/system'
 
 type Quota = {
@@ -115,7 +115,7 @@ export const platformPlanService = (log: FastifyBaseLogger) => {
                     inputTokens: usage.inputTokens,
                     outputTokens: usage.outputTokens,
                     totalTokens: usage.totalTokens ?? usage.inputTokens + usage.outputTokens,
-                }
+                },
             }
             await postTokenUsage(log, zeroApiUrl!, projectUserToken.token, tokenUsage)
         },

@@ -27,12 +27,12 @@ import { flowService } from '../flows/flow/flow.service'
 import { system } from '../helper/system/system'
 import { pieceMetadataService } from '../pieces/piece-metadata-service'
 import {
-    BuilderToolName,
     findBranchIndexFromNameInRouter,
     getDefaultPropertySettingsForActionOrTrigger,
     getInitalStepInputForActionOrTrigger,
     validatePieceNameOrThrow,
 } from './builder.utils'
+import { BuilderToolName } from './constants'
 
 const log = system.globalLogger()
 
