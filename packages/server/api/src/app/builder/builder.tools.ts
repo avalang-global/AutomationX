@@ -1,4 +1,4 @@
-import { PieceMetadataModel, PieceMetadataModelSummary } from '@activepieces/pieces-framework'
+import { ActionBase, PieceMetadataModel, PieceMetadataModelSummary, TriggerBase } from '@activepieces/pieces-framework'
 import { apVersionUtil } from '@activepieces/server-shared'
 import {
     AddActionRequest,
@@ -63,7 +63,7 @@ type GetAllBuilderPieceParams = {
     searchQuery?: string
 }
 
-const getAllPiecesSummary =  async (params: GetAllBuilderPieceParams): Promise<PieceMetadataModelSummary[]> => {
+const findPieces =  async (params: GetAllBuilderPieceParams): Promise<PieceMetadataModelSummary[]> => {
     const latestRelease = await apVersionUtil.getCurrentRelease()
     const pieces = await pieceMetadataService(log).list({
         includeTags: false,
@@ -73,8 +73,8 @@ const getAllPiecesSummary =  async (params: GetAllBuilderPieceParams): Promise<P
         edition: ApEdition.COMMUNITY,
         locale: LocalesEnum.ENGLISH,
     })
-    // Take first 5 matches and remove i18n translations
-    return pieces.map((piece) => ({ ...piece, i18n: undefined })).slice(0, 5)
+    // Take first 5 matches
+    return pieces.slice(0, 5)
 }
 
 type GetBuilderPieceParams = {
@@ -89,7 +89,7 @@ const getPieceMetadataByName = async (params: GetBuilderPieceParams): Promise<Pi
         ...params,
         locale: LocalesEnum.ENGLISH,
     })
-    return { ...piece, i18n: undefined }
+    return piece
 }
 
 type BuilderParams = {
@@ -114,8 +114,14 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
             }),
             execute: async (params) => {
                 log.info(params, 'list-pieces params')
-                const pieces = await getAllPiecesSummary(params)
-                return { pieces }
+                const pieces = await findPieces(params)
+                const minimalPieces = pieces.map((piece) => ({
+                    name: piece.name,
+                    version: piece.version,
+                    displayName: piece.displayName,
+                    description: piece.description,
+                })).slice(0, 5)
+                return { pieces: minimalPieces }
             },
         }),
         [BuilderToolName.GET_PIECE_INFO]: tool({
@@ -126,13 +132,38 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
             execute: async ({ pieceName }) => {
                 log.info({ pieceName }, 'get-piece-information params')
                 validatePieceNameOrThrow(pieceName)
-                const pieceMetadata = await getPieceMetadataByName({
+                const piece = await getPieceMetadataByName({
                     projectId,
                     platformId,
                     name: pieceName,
                     version: undefined,
                 })
-                return { pieceMetadata }
+                // Remove unwanted information
+                const actions = Object.fromEntries(Object.entries(piece.actions).map(([name, value]) => {
+                    const cleanedValue: Partial<ActionBase> = {
+                        name: value.name,
+                        displayName: value.displayName,
+                        description: value.description,
+                    }
+                    return [name, cleanedValue]
+                }))
+                const triggers = Object.fromEntries(Object.entries(piece.triggers).map(([name, value]) => {
+                    const cleanedValue: Partial<TriggerBase> = {
+                        name: value.name,
+                        displayName: value.displayName,
+                        description: value.description,
+                    }
+                    return [name, cleanedValue]
+                }))
+                const minimalMetadata =  {
+                    name: piece.name,
+                    version: piece.version,
+                    displayName: piece.displayName,
+                    description: piece.description,
+                    actions,
+                    triggers,
+                }
+                return { pieceMetadata: minimalMetadata }
             },
         }),
         [BuilderToolName.UPDATE_TRIGGER]: tool({
