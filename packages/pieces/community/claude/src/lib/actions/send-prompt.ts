@@ -2,7 +2,6 @@ import {
   createAction,
   DynamicPropsValue,
   Property,
-  StoreScope,
 } from '@activepieces/pieces-framework';
 import Anthropic from '@anthropic-ai/sdk';
 import mime from 'mime-types';
@@ -63,12 +62,6 @@ export const askClaude = createAction({
       required: false,
       description: 'URL of image to be used as input for the model.',
     }),
-    memoryKey: Property.ShortText({
-      displayName: 'Memory Key',
-      description:
-        'A memory key that will keep the chat history shared across runs and flows. Keep it empty to leave ChatGPT without memory of previous messages.',
-      required: false,
-    }),
     roles: Property.Json({
       displayName: 'Roles',
       required: false,
@@ -102,10 +95,9 @@ export const askClaude = createAction({
       }
   })
   },
-  async run({ auth, propsValue,store }) {
+  async run({ auth, propsValue }) {
     await propsValidation.validateZod(propsValue, {
       temperature: z.number().min(0).max(1.0).optional(),
-      memoryKey: z.string().max(128).optional(),
     });
 
     const anthropic = new Anthropic({
@@ -130,14 +122,6 @@ export const askClaude = createAction({
     if (propsValue.systemPrompt) {
       systemPrompt = propsValue.systemPrompt;
     }
-    let messageHistory: any[] | null = [];
-    if (propsValue.memoryKey) {
-      messageHistory = (await store.get(propsValue.memoryKey, StoreScope.PROJECT)) ?? [];
-    }
-    messageHistory.push({
-      role: 'user',
-      content: propsValue.prompt,
-    });
 
     type Content =
       | { type: 'text'; text: string }
@@ -158,7 +142,7 @@ export const askClaude = createAction({
     });
 
     const defaultMimeType = 'image/jpeg';
-    const currentMessage = {
+    roles.unshift({
       role: 'user',
       content: [
         {
@@ -180,9 +164,7 @@ export const askClaude = createAction({
             ]
           : []),
       ],
-    };
-
-    const allMessages = [...roles, ...messageHistory.slice(0, -1), currentMessage];
+    });
 
     const maxRetries = 4;
     let retries = 0;
@@ -202,7 +184,7 @@ export const askClaude = createAction({
               type: 'enabled',
               budget_tokens: budgetTokens ?? DEFAULT_TOKENS_FOR_THINKING_MODE,
             },
-            messages: allMessages,
+            messages: roles,
           });
   
           response = req.content.filter((block) => block.type === 'text')[0].text.trim()
@@ -213,22 +195,12 @@ export const askClaude = createAction({
             max_tokens: maxTokens,
             temperature: temperature,
             system: systemPrompt,
-            messages: allMessages,
+            messages: roles,
           });
   
           response = (req?.content[0] as TextBlock).text?.trim();
         }
-
-        // Add response to message history
-        if (response && propsValue.memoryKey) {
-          messageHistory.push({
-            role: 'assistant',
-            content: response,
-          });
-          
-          // Store updated history
-          await store.put(propsValue.memoryKey, messageHistory, StoreScope.PROJECT);
-        }
+       
 
         break; // Break out of the loop if the request is successful
       } catch (e: any) {
