@@ -143,32 +143,34 @@ export const PromptToFlowSidebar = ({
   }, []);
 
   return (
-    <div className="flex flex-col h-full">
-      <SidebarHeader onClose={handleCloseSidebar}>AutomationX</SidebarHeader>
-      <div className="pt-0 p-4 flex flex-col flex-grow overflow-hidden">
-        <ScrollArea className="flex-grow overflow-auto">
-          <CardList className="pb-3 pr-3" listClassName="gap-6">
-            {isShowWelcomeMessage && <ChatMessage message={welcomeMessage} />}
-            {messages.map((message, index) => (
-              <ChatMessage
-                key={index}
-                message={message}
-                ref={index === messages.length - 1 ? lastMessageRef : null}
-              />
-            ))}
-            <ScrollBar />
-          </CardList>
-        </ScrollArea>
+    <div className='relative h-full'>
+      <div className="absolute top-0 bottom-0 flex flex-col">
+        <SidebarHeader onClose={handleCloseSidebar}>AutomationX</SidebarHeader>
+        <div className="pt-0 p-4 flex flex-col flex-grow overflow-hidden">
+          <ScrollArea className="flex-grow overflow-auto">
+            <CardList className="pb-3 pr-3" listClassName="gap-6">
+              {isShowWelcomeMessage && <ChatMessage message={welcomeMessage} />}
+              {messages.map((message, index) => (
+                <ChatMessage
+                  key={index}
+                  message={message}
+                  ref={index === messages.length - 1 ? lastMessageRef : null}
+                />
+              ))}
+              <ScrollBar />
+            </CardList>
+          </ScrollArea>
 
-        <PromptInput
-          ref={textAreaRef}
-          value={inputMessage}
-          onChange={setInputMessage}
-          onSubmit={handleSendMessage}
-          loading={isPending}
-          placeholder={t('Describe your automation flow')}
-          icon
-        />
+          <PromptInput
+            ref={textAreaRef}
+            value={inputMessage}
+            onChange={setInputMessage}
+            onSubmit={handleSendMessage}
+            loading={isPending}
+            placeholder={t('Describe your automation flow')}
+            icon
+          />
+        </div>
       </div>
     </div>
   );
