@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { ImperativePanelHandle } from 'react-resizable-panels';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 import {
   LeftSideBarType,
@@ -96,7 +96,6 @@ const constructContainerKey = ({
 };
 const BuilderPage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { platform } = platformHooks.useCurrentPlatform();
   const [
     setRun,

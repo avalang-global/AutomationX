@@ -21,7 +21,7 @@ export const DashboardPageHeader = ({
   middleChildren?: React.ReactNode;
   tutorialTab?: TabType;
 }) => {
-  const className = !!middleChildren
+  const className = middleChildren
     ? 'grid grid-cols-3'
     : 'flex justify-between';
   return (

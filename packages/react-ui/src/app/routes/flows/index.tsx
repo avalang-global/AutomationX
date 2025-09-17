@@ -90,6 +90,8 @@ const FlowsPage = () => {
     navigate(newPath);
   };
 
+  // Converted from a normal to a tab view for prompt to workflow feature
+
   return (
     <Tabs
       value={activeTab}

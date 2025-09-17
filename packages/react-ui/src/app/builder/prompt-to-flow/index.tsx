@@ -1,3 +1,4 @@
+// Custom
 import { useMutation } from '@tanstack/react-query';
 import { t } from 'i18next';
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -19,7 +20,8 @@ import {
 } from '@/features/flows/lib/prompt-to-flow-api';
 import { flowsApi } from '@/features/flows/lib/flows-api';
 
-const WELCOME_MESSAGE = "Hello! How can I help you today?\nYou can type the changes you'd like for this flow, and I'll help you create or modify it"
+const WELCOME_MESSAGE =
+  "Hello! How can I help you today?\nYou can type the changes you'd like for this flow, and I'll help you create or modify it";
 
 export const PromptToFlowSidebar = ({
   initMessages,
@@ -75,10 +77,13 @@ export const PromptToFlowSidebar = ({
   });
 
   const handleAddNewMessage = (message: PromptMessage) => {
-    const messagesToUpdate = [...messages, {
-      ...message,
-      createdAt: new Date().toISOString(),
-    }];
+    const messagesToUpdate = [
+      ...messages,
+      {
+        ...message,
+        createdAt: new Date().toISOString(),
+      },
+    ];
     setMessages(messagesToUpdate);
     handleUpdateLocationState(messagesToUpdate);
     return messagesToUpdate;
@@ -107,8 +112,6 @@ export const PromptToFlowSidebar = ({
   };
 
   const handleCloseSidebar = () => {
-    // handleUpdateLocationState([]);
-    // setMessages([]);
     setLeftSidebar(LeftSideBarType.NONE);
   };
 
@@ -137,7 +140,7 @@ export const PromptToFlowSidebar = ({
       content: WELCOME_MESSAGE,
       createdAt: new Date().toISOString(),
     };
-  }, [])
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
@@ -145,10 +148,7 @@ export const PromptToFlowSidebar = ({
       <div className="pt-0 p-4 flex flex-col flex-grow overflow-hidden">
         <ScrollArea className="flex-grow overflow-auto">
           <CardList className="pb-3 pr-3" listClassName="gap-6">
-            {isShowWelcomeMessage && (
-              <ChatMessage message={welcomeMessage} />
-            )}
-
+            {isShowWelcomeMessage && <ChatMessage message={welcomeMessage} />}
             {messages.map((message, index) => (
               <ChatMessage
                 key={index}
