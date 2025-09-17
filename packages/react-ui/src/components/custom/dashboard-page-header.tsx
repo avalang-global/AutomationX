@@ -30,7 +30,7 @@ export const DashboardPageHeader = ({
     >
       <div>
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold">{title}</h1>
+          <h1 className="text-xl font-semibold">{title}</h1>
           {tutorialTab && (
             <TutorialsDialog location="table-title" initialTab={tutorialTab}>
               <Button variant="outline-primary" size="icon">
@@ -45,7 +45,7 @@ export const DashboardPageHeader = ({
           )}
         </div>
         {description && (
-          <span className="text-sm text-muted-foreground">{description}</span>
+          <span className="text-xs text-muted-foreground">{description}</span>
         )}
       </div>
       {middleChildren && (
