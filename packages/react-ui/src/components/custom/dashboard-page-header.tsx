@@ -26,7 +26,7 @@ export const DashboardPageHeader = ({
     : 'flex justify-between';
   return (
     <div
-      className={`w-full ${className} items-center border-b absolute left-0 top-0 bg-background py-3 px-6 z-30`}
+      className={`${className} items-center border-b bg-background py-3 px-6 -mx-4 mb-4`}
     >
       <div>
         <div className="flex items-center gap-2">
