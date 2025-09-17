@@ -1,11 +1,10 @@
 {
-  "name": "@activepieces/piece-docs-extraction",
+  "name": "@avalant/piece-docs-extraction",
   "version": "1.0.0",
   "type": "commonjs",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
   "dependencies": {
-    "jszip": "^3.10.1",
-    "tslib": "^2.3.0"
+    "jszip": "^3.10.1"
   }
 }

@@ -1,9 +1,8 @@
 import { Property, createAction } from '@activepieces/pieces-framework';
-import * as zlib from 'zlib';
 
 export const extractDocxAction = createAction({
-  name: 'extract_docx',
-  displayName: 'Extract Text from DOCX',
+  name: 'Extract Microsoft Word',
+  displayName: 'Extract text content from a Microsoft Word (.docx) document',
   description: 'Extract text content from a Microsoft Word (.docx) document',
   errorHandlingOptions: {
     continueOnFailure: {
@@ -15,7 +14,7 @@ export const extractDocxAction = createAction({
   },
   props: {
     file: Property.File({
-      displayName: 'DOCX File',
+      displayName: 'Words File',
       description: 'Upload a Microsoft Word (.docx) document to extract text from',
       required: true,
     }),
