@@ -15,7 +15,7 @@ export const extractWordAction = createAction({
   },
   props: {
     file: Property.File({
-      displayName: 'Word File',
+      displayName: 'Word Document',
       description: 'Upload a Microsoft Word (.docx) document',
       required: true,
     }),
