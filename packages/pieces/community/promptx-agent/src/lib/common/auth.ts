@@ -8,7 +8,7 @@ import { PromptXAuthType, Server } from './types';
 export const promptxAuth = PieceAuth.CustomAuth({
   required: true,
   props: {
-      server: Property.StaticDropdown<Server>({
+    server: Property.StaticDropdown<Server>({
       displayName: 'Server',
       options: {
         options: [

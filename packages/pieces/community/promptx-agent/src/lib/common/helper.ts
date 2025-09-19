@@ -1,13 +1,13 @@
 import { isNil } from '@activepieces/shared';
 import querystring from 'querystring';
 import {
-    Agent,
-    AgentXLoginResponseType,
-    Conversation,
-    PromptXAuthType,
-    PromptXLoginResponseType,
-    PromptXUserResponseType,
-    Server,
+  Agent,
+  AgentXLoginResponseType,
+  Conversation,
+  PromptXAuthType,
+  PromptXLoginResponseType,
+  PromptXUserResponseType,
+  Server,
 } from './types';
 
 const STAGING_AUTH_URL = 'https://mocha.centerapp.io';
