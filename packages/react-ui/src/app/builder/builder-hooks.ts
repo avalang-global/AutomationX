@@ -73,6 +73,7 @@ export enum LeftSideBarType {
   VERSIONS = 'versions',
   RUN_DETAILS = 'run-details',
   AI_COPILOT = 'chat',
+  PROMPT_TO_FLOW = 'prompt-to-flow',
   NONE = 'none',
 }
 
@@ -128,7 +129,7 @@ export type BuilderState = {
   setFlow: (flow: PopulatedFlow) => void;
   setSampleData: (stepName: string, payload: unknown) => void;
   setSampleDataInput: (stepName: string, payload: unknown) => void;
-  setVersion: (flowVersion: FlowVersion) => void;
+  setVersion: (flowVersion: FlowVersion, isReload?: boolean) => void;
   insertMention: InsertMentionHandler | null;
   setReadOnly: (readOnly: boolean) => void;
   setInsertMentionHandler: (handler: InsertMentionHandler | null) => void;
@@ -457,7 +458,7 @@ export const createBuilderStore = (initialState: BuilderInitialState) =>
           flowUpdatesQueue.add(updateRequest);
           return { flowVersion: newFlowVersion };
         }),
-      setVersion: (flowVersion: FlowVersion) => {
+      setVersion: (flowVersion: FlowVersion, isReload: boolean = false) => {
         const initiallySelectedStep = determineInitiallySelectedStep(
           null,
           flowVersion,
@@ -472,7 +473,7 @@ export const createBuilderStore = (initialState: BuilderInitialState) =>
           readonly:
             state.flow.publishedVersionId !== flowVersion.id &&
             flowVersion.state === FlowVersionState.LOCKED,
-          leftSidebar: LeftSideBarType.NONE,
+          leftSidebar: isReload ? state.leftSidebar : LeftSideBarType.NONE,
           rightSidebar:
             initiallySelectedStep && !isEmptyTriggerInitiallySelected
               ? RightSideBarType.PIECE_SETTINGS

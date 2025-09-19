@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { ImperativePanelHandle } from 'react-resizable-panels';
+import { useLocation } from 'react-router-dom';
 
 import {
   LeftSideBarType,
@@ -25,6 +26,7 @@ import { flowRunsApi } from '@/features/flow-runs/lib/flow-runs-api';
 import { piecesHooks } from '@/features/pieces/lib/pieces-hooks';
 import { flagsHooks } from '@/hooks/flags-hooks';
 import { platformHooks } from '@/hooks/platform-hooks';
+import { PromptMessage } from '@/features/flows/lib/prompt-flow-api';
 import {
   FlowActionType,
   ApEdition,
@@ -37,7 +39,11 @@ import {
   isNil,
 } from '@activepieces/shared';
 
-import { cn, useElementSize } from '../../lib/utils';
+import {
+  cn,
+  NEW_FLOW_WITH_AI_QUERY_PARAM,
+  useElementSize,
+} from '../../lib/utils';
 
 import { BuilderHeader } from './builder-header/builder-header';
 import { CopilotSidebar } from './copilot';
@@ -47,6 +53,7 @@ import { FlowVersionsList } from './flow-versions';
 import { FlowRunDetails } from './run-details';
 import { RunsList } from './run-list';
 import { StepSettingsContainer } from './step-settings';
+import { PromptToFlowSidebar } from './prompt-to-flow';
 
 const minWidthOfSidebar = 'min-w-[max(20vw,400px)]';
 const animateResizeClassName = `transition-all duration-200`;
@@ -88,9 +95,11 @@ const constructContainerKey = ({
   );
 };
 const BuilderPage = () => {
+  const location = useLocation();
   const { platform } = platformHooks.useCurrentPlatform();
   const [
     setRun,
+    setLeftSidebar,
     flowVersion,
     leftSidebar,
     rightSidebar,
@@ -99,6 +108,7 @@ const BuilderPage = () => {
     selectedStep,
   ] = useBuilderStateContext((state) => [
     state.setRun,
+    state.setLeftSidebar,
     state.flowVersion,
     state.leftSidebar,
     state.rightSidebar,
@@ -143,6 +153,22 @@ const BuilderPage = () => {
   const rightHandleRef = useAnimateSidebar(rightSidebar);
   const leftHandleRef = useAnimateSidebar(leftSidebar);
   const rightSidePanelRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<PromptMessage[]>([]);
+
+  useEffect(() => {
+    if (
+      !location.state ||
+      !Array.isArray(location.state.messages) ||
+      location.state.messages.length === 0
+    ) {
+      return;
+    }
+    console.log('location.state.messages', location.state.messages);
+    messagesRef.current = location.state.messages as PromptMessage[];
+    if (location.search.includes(NEW_FLOW_WITH_AI_QUERY_PARAM)) {
+      setLeftSidebar(LeftSideBarType.PROMPT_TO_FLOW);
+    }
+  }, [location.state]);
 
   const { pieceModel, refetch: refetchPiece } =
     piecesHooks.usePieceModelForStepSettings({
@@ -217,6 +243,9 @@ const BuilderPage = () => {
             {leftSidebar === LeftSideBarType.RUN_DETAILS && <FlowRunDetails />}
             {leftSidebar === LeftSideBarType.VERSIONS && <FlowVersionsList />}
             {leftSidebar === LeftSideBarType.AI_COPILOT && <CopilotSidebar />}
+            {leftSidebar === LeftSideBarType.PROMPT_TO_FLOW && (
+              <PromptToFlowSidebar initMessages={messagesRef.current} />
+            )}
           </div>
         </ResizablePanel>
         <ResizableHandle

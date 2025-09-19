@@ -1,4 +1,5 @@
 import { AIUsageFeature, createAIModel } from '@activepieces/common-ai'
+import { AppSystemProp } from '@activepieces/server-shared'
 import {
     assertNotNullOrUndefined,
     FlowAction,
@@ -7,14 +8,18 @@ import {
     FlowVersion,
     FlowVersionState,
 } from '@activepieces/shared'
-import { openai } from '@ai-sdk/openai'
+import { createOpenAI, openai } from '@ai-sdk/openai'
+import { LanguageModelV2 } from '@ai-sdk/provider'
 import { generateText, GenerateTextResult, stepCountIs } from 'ai'
 import { FastifyBaseLogger } from 'fastify'
 import { accessTokenManager } from '../authentication/lib/access-token-manager'
 import { flowService } from '../flows/flow/flow.service'
 import { flowVersionService } from '../flows/flow-version/flow-version.service'
 import { domainHelper } from '../helper/domain-helper'
+import { system } from '../helper/system/system'
+import { platformPlanService } from '../platform-plan/platform-plan.service'
 import { buildBuilderTools } from './builder.tools'
+import { BuilderOpenAiModel, builderSystemPrompt } from './constants'
 
 /*
  * Strips a FlowVersion of unnecessary metadata before sending it to the AI model.
@@ -57,32 +62,35 @@ import { buildBuilderTools } from './builder.tools'
  */
 const stripFlowVersionForAiPrompt = (flowVersion: FlowVersion): string => {
     // Traverse the flow structure and clean each step
-    const minimalFlowVersion = flowStructureUtil.transferFlow(flowVersion, (step) => {
-        const cleaned = { ...step }
+    const minimalFlowVersion = flowStructureUtil.transferFlow(
+        flowVersion,
+        (step) => {
+            const cleaned = { ...step }
 
-        // Remove unneeded step settings metadata
-        if (cleaned.settings) {
-            delete cleaned.settings.errorHandlingOptions
-            delete cleaned.settings.inputUiInfo
-            delete cleaned.settings.connectionIds
-            delete cleaned.settings.agentIds
-            delete cleaned.settings.input
-            delete cleaned.settings.inputUiInfo // duplicate remove to be safe
-        }
+            // Remove unneeded step settings metadata
+            if (cleaned.settings) {
+                delete cleaned.settings.errorHandlingOptions
+                delete cleaned.settings.inputUiInfo
+                delete cleaned.settings.connectionIds
+                delete cleaned.settings.agentIds
+                delete cleaned.settings.input
+                delete cleaned.settings.inputUiInfo // duplicate remove to be safe
+            }
 
-        // Remove extra fields from triggers
-        if (flowStructureUtil.isTrigger(cleaned.type)) {
-            delete (cleaned as Partial<FlowTrigger>).displayName
-        }
+            // Remove extra fields from triggers
+            if (flowStructureUtil.isTrigger(cleaned.type)) {
+                delete (cleaned as Partial<FlowTrigger>).displayName
+            }
 
-        // Remove extra fields from actions
-        if (flowStructureUtil.isAction(cleaned.type)) {
-            delete (cleaned as Partial<FlowAction>).valid
-            delete (cleaned as Partial<FlowAction>).displayName
-        }
+            // Remove extra fields from actions
+            if (flowStructureUtil.isAction(cleaned.type)) {
+                delete (cleaned as Partial<FlowAction>).valid
+                delete (cleaned as Partial<FlowAction>).displayName
+            }
 
-        return cleaned
-    })
+            return cleaned
+        },
+    )
 
     // Remove top-level metadata that’s irrelevant to the AI
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -92,54 +100,53 @@ const stripFlowVersionForAiPrompt = (flowVersion: FlowVersion): string => {
     return JSON.stringify(rest, null, 2)
 }
 
+const userOpenAiModel = async (platformId: string, projectId: string): Promise<LanguageModelV2> => {
+    const engineToken = await accessTokenManager.generateEngineToken({
+        projectId,
+        platformId,
+    })
+    const baseURL = await domainHelper.getPublicApiUrl({
+        path: '/v1/ai-providers/proxy/openai',
+        platformId,
+    })
+    const model = createAIModel({
+        providerName: 'openai',
+        modelInstance: openai(BuilderOpenAiModel),
+        engineToken,
+        baseURL,
+        metadata: {
+            feature: AIUsageFeature.TEXT_AI,
+        },
+    })
+    return model
+}
+
+const promptxOpenAiModel = async (): Promise<LanguageModelV2> => {
+    const openAiKey = system.getOrThrow(AppSystemProp.PROMPTX_OPENAI_KEY)
+    const provider = createOpenAI({ apiKey: openAiKey })
+    return provider(BuilderOpenAiModel)
+}
+
+const selectOpenAiModel = async (platformId: string, projectId: string): Promise<LanguageModelV2> => {
+    if (system.isStandaloneVersion()) {
+        return userOpenAiModel(platformId, projectId)
+    }
+    return promptxOpenAiModel()
+}
 
 export const builderService = (log: FastifyBaseLogger) => ({
     async runAndUpdate({ userId, projectId, platformId, flowId, messages }: RunParams): Promise<GenerateTextResult<ReturnType<typeof buildBuilderTools>, string>> {
-        await flowService(log).getOneOrThrow({
+        const flow = await flowService(log).getOneOrThrow({
             projectId,
             id: flowId,
         })
         const flowVersion = await flowVersionService(log).getLatestVersion(flowId, FlowVersionState.DRAFT)
         assertNotNullOrUndefined(flowVersion, 'No draft flow version found')
 
-        const engineToken = await accessTokenManager.generateEngineToken({
-            projectId,
-            platformId,
-        })
-        const baseURL = await domainHelper.getPublicApiUrl({ path: '/v1/ai-providers/proxy/openai', platformId })
-        const system = `You are a workflow builder agent.
+        const systemWithFlowPrompt = builderSystemPrompt + '\n' + 'Current flow:\n' + stripFlowVersionForAiPrompt(flowVersion)
+        log.info(systemWithFlowPrompt)
 
-            A workflow or "flow" consists of "steps" which integrate to external services called "pieces".
-            A piece can have multiple triggers and actions.
-            A flow consists of one trigger step and multiple action steps beneath it.
-            A flow is represented in JSON format.
-            A trigger step should always be named "trigger" whereas action step names must be unique in a flow and simple (ex. "step_1", "step_2" etc)
-
-            You have been provided with atomic tools to modify a flow by updating trigger and action steps.
-
-            Here's what you should do
-            1. User may not provide fully qualified piece names, so you should first find pieceName and pieceVersion using the "list-pieces" tool
-            2. To find the correct actionName or triggerName for a given pieceName, use the "get-piece-information" tool
-            3. Identify where to add the required action by asking the user the "parentStepName" used in "add-action" tool
-
-            Important: If you're unsure of a pieceName, triggerName or parentStepName - please ask the user
-            `
-        const systemWithFlowPrompt = `
-            ${system}
-
-            Here's the current flow:
-
-            ${stripFlowVersionForAiPrompt(flowVersion)}
-            `
-        const model = createAIModel({
-            providerName: 'openai',
-            modelInstance: openai('gpt-4.1'),
-            engineToken,
-            baseURL,
-            metadata: {
-                feature: AIUsageFeature.TEXT_AI,
-            },
-        })
+        const model = await selectOpenAiModel(platformId, projectId)
         const result = await generateText({
             model,
             stopWhen: stepCountIs(10),
@@ -147,8 +154,21 @@ export const builderService = (log: FastifyBaseLogger) => ({
                 { role: 'system', content: systemWithFlowPrompt },
                 ...messages,
             ],
-            tools: buildBuilderTools({ userId, projectId, platformId, flowId, flowVersionId: flowVersion.id }),
+            prepareStep: async ({ stepNumber, messages }) => {
+                // Ensure only last 10 messages are fed into history in initial call
+                if (stepNumber === 0) {
+                    return { messages: messages.slice(-10) }
+                }
+                return {}
+            },
+            tools: buildBuilderTools({ userId, projectId, platformId, flow, flowVersion }),
         })
+
+        if (result.usage) {
+            log.info(result.usage, 'builder ai usage')
+            await platformPlanService(log).publishTokenUsage(projectId, result.usage)
+        }
+
         return result
     },
 })
