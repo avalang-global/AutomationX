@@ -62,6 +62,7 @@ export const getUserMe = async (
       'Content-Type': 'application/json',
     },
   });
+  console.log('[knowledge-base] user fetched');
   const data: { id: string; iam2ID: string } = await response.json();
   return data;
 };
