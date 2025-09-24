@@ -1,63 +1,47 @@
 import { createAction, Property } from '@activepieces/pieces-framework';
-import { outlookEmailAuth } from '../..';
-import { httpClient, HttpMethod } from '@activepieces/pieces-common';
+import { microsoftOutlookEmailAuth } from '../auth';
+import { Client, PageCollection } from '@microsoft/microsoft-graph-client';
+import { FileAttachment } from '@microsoft/microsoft-graph-types';
 
 export const downloadAttachment = createAction({
-  auth: outlookEmailAuth,
+  auth: microsoftOutlookEmailAuth,
   name: 'download-attachment',
   displayName: 'Download Attachment',
-  description: 'Download attachments from an Outlook email message',
+  description: 'Download attachments from a specific email message.',
   props: {
     messageId: Property.ShortText({
       displayName: 'Message ID',
+      description: 'The ID of the email message containing the attachment.',
       required: true,
-      description: 'The ID of the email message containing attachments',
     }),
   },
-
   async run(context) {
-    const { propsValue, auth, files } = context;
-    const { messageId } = propsValue;
+    const { messageId } = context.propsValue;
 
-    const response = await httpClient.sendRequest({
-      method: HttpMethod.GET,
-      url: `https://graph.microsoft.com/v1.0/me/messages/${messageId}/attachments`,
-      headers: {
-        Authorization: `Bearer ${auth.access_token}`,
-        'Content-Type': 'application/json',
+    const client = Client.initWithMiddleware({
+      authProvider: {
+        getAccessToken: () => Promise.resolve(context.auth.access_token),
       },
     });
 
-    const attachments = response.body.value || [];
-    const savedFiles = [];
+    const response: PageCollection = await client
+      .api(`/me/messages/${messageId}/attachments`)
+      .get();
 
-    for (const attachment of attachments) {
-      if (
-        attachment['@odata.type'] === '#microsoft.graph.fileAttachment' &&
-        attachment.contentBytes
-      ) {
-        // Convert base64 to buffer
-        const fileBuffer = Buffer.from(attachment.contentBytes, 'base64');
+    const attachments = [];
 
-        // Save file using FilesService
-        const savedFile = await files.write({
-          fileName: attachment.name,
-          data: fileBuffer,
-        });
-
-        savedFiles.push({
-          filename: attachment.name,
-          fileId: savedFile,
-          contentType: attachment.contentType,
-          size: attachment.size,
-          lastModified: attachment.lastModifiedDateTime,
+    for (const attachment of response.value as FileAttachment[]) {
+      if (attachment.name && attachment.contentBytes) {
+        attachments.push({
+          ...attachment,
+          file: await context.files.write({
+            fileName: attachment.name || 'test.png',
+            data: Buffer.from(attachment.contentBytes, 'base64'),
+          }),
         });
       }
     }
 
-    return {
-      attachmentCount: savedFiles.length,
-      attachments: savedFiles,
-    };
+    return attachments;
   },
 });
