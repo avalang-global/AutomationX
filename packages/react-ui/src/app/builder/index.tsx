@@ -233,7 +233,7 @@ const BuilderPage = () => {
           maxSize={39}
           order={1}
           ref={leftHandleRef}
-          className={cn('min-w-0 bg-background z-20  overflow-visible', {
+          className={cn('min-w-0 bg-background z-20 ', {
             [minWidthOfSidebar]: leftSidebar !== LeftSideBarType.NONE,
             [animateResizeClassName]: !isDraggingHandle,
           })}
@@ -248,6 +248,7 @@ const BuilderPage = () => {
             )}
           </div>
         </ResizablePanel>
+
         <ResizableHandle
           disabled={leftSidebar === LeftSideBarType.NONE}
           withHandle={leftSidebar !== LeftSideBarType.NONE}
