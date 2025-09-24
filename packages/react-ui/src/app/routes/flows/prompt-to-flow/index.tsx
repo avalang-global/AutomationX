@@ -79,10 +79,10 @@ export function CreateFlowWithAI() {
     <div className="mt-2 p-4 rounded-lg flex flex-col gap-4 bg-gray-100">
       <PromptInput
         placeholder={t(
-          'Describe your automation flow (e.g., "Send welcome email to new users, add to CRM, and schedule follow-up task within 2 days")',
+          'Describe your automation flow (e.g., "Send welcome email to new users, add to CRM, and schedule follow-up task after 2 days")',
         )}
         className="w-full"
-        minRows={5}
+        minRows={2}
         maxRows={5}
         value={prompt}
         onChange={setPrompt}
