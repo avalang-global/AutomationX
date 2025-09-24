@@ -1,82 +1,105 @@
-import { createTrigger, TriggerStrategy } from '@activepieces/pieces-framework';
 import {
-  AuthenticationType,
-  httpClient,
-  HttpMethod,
-  HttpRequest,
+  DedupeStrategy,
+  Polling,
+  pollingHelper,
 } from '@activepieces/pieces-common';
-import { outlookEmailAuth } from '../..';
+import {
+  PiecePropValueSchema,
+  TriggerStrategy,
+  createTrigger,
+} from '@activepieces/pieces-framework';
+import { Client, PageCollection } from '@microsoft/microsoft-graph-client';
+import { Message } from '@microsoft/microsoft-graph-types';
+import dayjs from 'dayjs';
+import { microsoftOutlookEmailAuth } from '../auth';
 
-export const newEmailTrigger = createTrigger({
-  auth: outlookEmailAuth,
-  // auth: check https://www.activepieces.com/docs/developers/piece-reference/authentication,
-  name: 'new-email',
-  displayName: 'New Email',
-  description: 'Trigger when new email is found in outlook mail box',
-  props: {},
-  sampleData: {
-    id: 'email-id',
-    subject: 'New email subject',
-    sender: { emailAddress: { address: 'sender@example.com' } },
-    receivedDateTime: '2024-03-20T10:00:00Z',
-    bodyPreview: 'This is a preview of the email...',
-  },
-  type: TriggerStrategy.POLLING,
-  async onEnable(context) {
-    await context.store.put('lastPoll', Date.now());
-  },
-  async onDisable(context) {
-    return;
-  },
-  async test(context) {
-    const { auth } = context;
-    const request: HttpRequest = {
-      method: HttpMethod.GET,
-      url: 'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages',
-      body: {},
-      authentication: {
-        type: AuthenticationType.BEARER_TOKEN,
-        token: auth.access_token,
-      },
-    };
-    const response = await httpClient.sendRequest(request);
-    return response.body.value;
-  },
+const polling: Polling<
+  PiecePropValueSchema<typeof microsoftOutlookEmailAuth>,
+  Record<string, unknown>
+> = {
+  strategy: DedupeStrategy.TIMEBASED,
+  items: async ({ auth, lastFetchEpochMS }) => {
+    console.warn('[ms-outlook-email] polling items; lastFetchEpochMS', lastFetchEpochMS);
 
-  async run(context) {
-    const { auth, store } = context;
-    const lastPollRaw = await store.get('lastPoll');
-    const lastPollTime =
-      typeof lastPollRaw === 'number'
-        ? lastPollRaw
-        : new Date(`${lastPollRaw}`).getTime(); // Ensure it's a number
-    const access_token = auth.access_token;
-    // Fetch latest emails
-    const response = await httpClient.sendRequest({
-      method: HttpMethod.GET,
-      url: 'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages',
-      headers: {
-        Authorization: `Bearer ${access_token}`,
+    const client = Client.initWithMiddleware({
+      authProvider: {
+        getAccessToken: () => Promise.resolve(auth.access_token),
       },
-      queryParams: { $top: '5', $orderby: 'receivedDateTime DESC' },
     });
 
-    const emails = response.body.value;
-    const receivedDateTime = emails.map((email: any) => ({
-      dateTime: email.receivedDateTime,
-      subject: email.subject,
-    }));
-    console.log('Emails list in trigger...', receivedDateTime, lastPollTime);
-    const newEmails = emails.filter(
-      (email: any) => new Date(email.receivedDateTime).getTime() > lastPollTime
-    );
-    console.log('Emails list After filtering .', newEmails.length);
-    // Store latest email time if new emails are found
-    if (newEmails.length > 0) {
-      await store.put('lastPoll', newEmails[0].receivedDateTime);
-      return newEmails; // Return new emails to trigger the event
+    const messages = [];
+
+    const filter =
+      lastFetchEpochMS === 0
+        ? '$top=10'
+        : `$filter=receivedDateTime gt ${dayjs(
+            lastFetchEpochMS
+          ).toISOString()}`;
+
+    let response: PageCollection = await client
+      .api(`/me/mailFolders/inbox/messages?${filter}`)
+      .orderby('receivedDateTime desc')
+      .get();
+
+    console.warn('[ms-outlook-email] polling items; fetch successful');
+
+    if (lastFetchEpochMS === 0) {
+      for (const message of response.value as Message[]) {
+        messages.push(message);
+      }
+    } else {
+      while (response.value.length > 0) {
+        for (const message of response.value as Message[]) {
+          messages.push(message);
+        }
+
+        if (response['@odata.nextLink']) {
+          response = await client.api(response['@odata.nextLink']).get();
+        } else {
+          break;
+        }
+      }
     }
 
-    return []; // No new emails
+    const items = messages.map((message) => ({
+      epochMilliSeconds: dayjs(message.receivedDateTime).valueOf(),
+      data: message,
+    }));
+
+    console.warn('[ms-outlook-email] polling items; new items length', items.length);
+
+    return items;
+  },
+};
+
+export const newEmailTrigger = createTrigger({
+  auth: microsoftOutlookEmailAuth,
+  name: 'new-email',
+  displayName: 'New Email',
+  description: 'Triggers when a new email is received in the inbox.',
+  props: {},
+  sampleData: {},
+  type: TriggerStrategy.POLLING,
+  async onEnable(context) {
+    await pollingHelper.onEnable(polling, {
+      auth: context.auth,
+      store: context.store,
+      propsValue: context.propsValue,
+    });
+  },
+  async onDisable(context) {
+    await pollingHelper.onDisable(polling, {
+      auth: context.auth,
+      store: context.store,
+      propsValue: context.propsValue,
+    });
+  },
+  async test(context) {
+    console.warn('[ms-outlook-email] new email poll test start');
+    return await pollingHelper.test(polling, context);
+  },
+  async run(context) {
+    console.warn('[ms-outlook-email] new email poll run start');
+    return await pollingHelper.poll(polling, context);
   },
 });
