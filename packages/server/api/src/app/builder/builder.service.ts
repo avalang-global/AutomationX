@@ -1,7 +1,10 @@
 import { AIUsageFeature, createAIModel } from '@activepieces/common-ai'
 import { AppSystemProp } from '@activepieces/server-shared'
 import {
+    apId,
     assertNotNullOrUndefined,
+    BuilderMessage,
+    BuilderMessageRole,
     FlowAction,
     flowStructureUtil,
     FlowTrigger,
@@ -10,9 +13,21 @@ import {
 } from '@activepieces/shared'
 import { createOpenAI, openai } from '@ai-sdk/openai'
 import { LanguageModelV2 } from '@ai-sdk/provider'
-import { generateText, GenerateTextResult, stepCountIs } from 'ai'
+import {
+    AssistantModelMessage,
+    generateText,
+    GenerateTextResult,
+    LanguageModelUsage,
+    ModelMessage,
+    stepCountIs,
+    ToolContent,
+    ToolModelMessage,
+    UserModelMessage,
+} from 'ai'
+import dayjs from 'dayjs'
 import { FastifyBaseLogger } from 'fastify'
 import { accessTokenManager } from '../authentication/lib/access-token-manager'
+import { repoFactory } from '../core/db/repo-factory'
 import { flowService } from '../flows/flow/flow.service'
 import { flowVersionService } from '../flows/flow-version/flow-version.service'
 import { domainHelper } from '../helper/domain-helper'
@@ -20,6 +35,7 @@ import { system } from '../helper/system/system'
 import { platformPlanService } from '../platform-plan/platform-plan.service'
 import { buildBuilderTools } from './builder.tools'
 import { BuilderOpenAiModel, builderSystemPrompt } from './constants'
+import { BuilderMessageEntity } from './message.entity'
 
 /*
  * Strips a FlowVersion of unnecessary metadata before sending it to the AI model.
@@ -134,7 +150,55 @@ const selectOpenAiModel = async (platformId: string, projectId: string): Promise
     return promptxOpenAiModel()
 }
 
+const builderMessagesRepo = repoFactory(BuilderMessageEntity)
+
 export const builderService = (log: FastifyBaseLogger) => ({
+    async fetchMessages(params: FetchMessagesParams): Promise<BuilderMessage[]> {
+        const { limit, ...rest } = params
+        const upperLimit = limit ? limit + 10 : undefined
+        const messages = await builderMessagesRepo().find({ where: rest, order: { created: 'DESC' }, take: upperLimit })
+        const sortedItems = messages.reverse()
+        let result = sortedItems
+
+        if (limit && sortedItems.length > limit) {
+            const excess = sortedItems.length - limit
+            for (let i = excess; i >= 0; i--) {
+                if (sortedItems[i].role !== BuilderMessageRole.TOOL) {
+                    result = sortedItems.slice(i)
+                    break
+                }
+            }
+        }
+        try {
+            return result.map((m) => ({ ...m, content: JSON.parse(m.content) }))
+        }
+        catch (error) {
+            log.error(`Unable to fetch builder messages due to error ${error instanceof Error ? error.message : error}`)
+        }
+        return []
+    },
+    async saveMessages(params: SaveMessagesParams): Promise<void> {
+        const { projectId, flowId, messages, usage } = params
+        const timeNow = dayjs()
+        const internalMessages: BuilderMessage[] = messages.map((m, i) => ({
+            id: apId(),
+            projectId,
+            flowId,
+            created: timeNow.add(i, 'millisecond').toISOString(),
+            updated: timeNow.add(i, 'millisecond').toISOString(),
+            role: m.role as BuilderMessageRole,
+            content: JSON.stringify(m.content),
+            usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        }))
+        if (internalMessages.length) {
+            internalMessages[internalMessages.length - 1].usage = {
+                inputTokens: usage?.inputTokens ?? 0,
+                outputTokens: usage?.outputTokens ?? 0,
+                totalTokens: usage?.totalTokens ?? 0,
+            }
+        }
+        await builderMessagesRepo().insert(internalMessages)
+    },
     async runAndUpdate({ userId, projectId, platformId, flowId, messages }: RunParams): Promise<GenerateTextResult<ReturnType<typeof buildBuilderTools>, string>> {
         const flow = await flowService(log).getOneOrThrow({
             projectId,
@@ -144,7 +208,16 @@ export const builderService = (log: FastifyBaseLogger) => ({
         assertNotNullOrUndefined(flowVersion, 'No draft flow version found')
 
         const systemWithFlowPrompt = builderSystemPrompt + '\n' + 'Current flow:\n' + stripFlowVersionForAiPrompt(flowVersion)
-        log.info(systemWithFlowPrompt)
+        // log.info(systemWithFlowPrompt)
+
+        const userMessage: UserModelMessage = { role: 'user', content: messages[messages.length - 1].content }
+        const oldMessages = await builderService(log).fetchMessages({ projectId, flowId, limit: 10 })
+        const oldModelMessages: ModelMessage[] = oldMessages.map((o) => {
+            if (o.role === BuilderMessageRole.ASSISTANT) return { role: 'assistant', content: o.content }
+            if (o.role === BuilderMessageRole.USER) return { role: 'user', content: o.content }
+            return { role: 'tool', content: o.content as unknown as ToolContent }
+        })
+        // log.info(JSON.stringify(oldModelMessages))
 
         const model = await selectOpenAiModel(platformId, projectId)
         const result = await generateText({
@@ -152,15 +225,9 @@ export const builderService = (log: FastifyBaseLogger) => ({
             stopWhen: stepCountIs(10),
             messages: [
                 { role: 'system', content: systemWithFlowPrompt },
-                ...messages,
+                userMessage,
+                ...oldModelMessages,
             ],
-            prepareStep: async ({ stepNumber, messages }) => {
-                // Ensure only last 10 messages are fed into history in initial call
-                if (stepNumber === 0) {
-                    return { messages: messages.slice(-10) }
-                }
-                return {}
-            },
             tools: buildBuilderTools({ userId, projectId, platformId, flow, flowVersion }),
         })
 
@@ -169,6 +236,9 @@ export const builderService = (log: FastifyBaseLogger) => ({
             await platformPlanService(log).publishTokenUsage(projectId, result.usage)
         }
 
+        await builderService(log).saveMessages({ projectId, flowId, messages: [ userMessage ] })
+        await builderService(log).saveMessages({ projectId, flowId, messages: result.response.messages, usage: result.usage })
+
         return result
     },
 })
@@ -176,6 +246,19 @@ export const builderService = (log: FastifyBaseLogger) => ({
 type ChatMessage = {
     role: 'system' | 'user' | 'assistant'
     content: string
+}
+
+type FetchMessagesParams = {
+    projectId: string
+    flowId: string
+    limit?: number
+}
+
+type SaveMessagesParams = {
+    projectId: string
+    flowId: string
+    messages: (UserModelMessage | AssistantModelMessage | ToolModelMessage)[]
+    usage?: LanguageModelUsage
 }
 
 type RunParams = {
