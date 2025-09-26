@@ -37,6 +37,8 @@ import { buildBuilderTools } from './builder.tools'
 import { BuilderOpenAiModel, builderSystemPrompt } from './constants'
 import { BuilderMessageEntity } from './message.entity'
 
+const STEP_COUNT_LIMIT = 10
+
 /*
  * Strips a FlowVersion of unnecessary metadata before sending it to the AI model.
  * The goal is to reduce token usage and prevent the model from being distracted
@@ -114,6 +116,48 @@ const stripFlowVersionForAiPrompt = (flowVersion: FlowVersion): string => {
 
     // Return as pretty-printed JSON for easier reading in the prompt
     return JSON.stringify(rest, null, 2)
+}
+
+const postProcessResult = (result: GenerateTextResult<ReturnType<typeof buildBuilderTools>, unknown>) => {
+    const messages = [...result.response.messages]
+    const lastMessage = messages.at(-1)
+
+    if (!lastMessage) {
+        messages.push({
+            role: 'assistant',
+            content: 'I could not generate a response due to abrupt termination',
+        })
+    }
+    else if (lastMessage.role === 'assistant') {
+        const incompleteToolCalls: { id: string, name: string }[] = []
+        if (typeof lastMessage.content !== 'string') {
+            incompleteToolCalls.push(
+                ...lastMessage.content
+                    .filter((c) => c.type === 'tool-call')
+                    .map((c) => ({ id: c.toolCallId, name: c.toolName })),
+            )
+        }
+        if (incompleteToolCalls.length) {
+            // Inject synthetic tool results to handle dangling tool call problems
+            messages.push({
+                role: 'tool',
+                content: incompleteToolCalls.map((c) => ({
+                    toolCallId: c.id,
+                    toolName: c.name,
+                    type: 'tool-result',
+                    output: { type: 'error-text', value: 'a' },
+                })),
+            })
+
+            // Finish up with assistant message to continue the conversation
+            messages.push({
+                role: 'assistant',
+                content: 'I was not able to execute due to max step limit breach. Do you want me to try again from where it failed?',
+            })
+        }
+    }
+
+    return messages
 }
 
 const userOpenAiModel = async (platformId: string, projectId: string): Promise<LanguageModelV2> => {
@@ -222,7 +266,7 @@ export const builderService = (log: FastifyBaseLogger) => ({
         const model = await selectOpenAiModel(platformId, projectId)
         const result = await generateText({
             model,
-            stopWhen: stepCountIs(10),
+            stopWhen: stepCountIs(STEP_COUNT_LIMIT),
             messages: [
                 { role: 'system', content: systemWithFlowPrompt },
                 userMessage,
@@ -231,13 +275,15 @@ export const builderService = (log: FastifyBaseLogger) => ({
             tools: buildBuilderTools({ userId, projectId, platformId, flow, flowVersion }),
         })
 
+        const resultMessages = postProcessResult(result)
+
         if (result.usage) {
             log.info(result.usage, 'builder ai usage')
             await platformPlanService(log).publishTokenUsage(projectId, result.usage)
         }
 
         await builderService(log).saveMessages({ projectId, flowId, messages: [ userMessage ] })
-        await builderService(log).saveMessages({ projectId, flowId, messages: result.response.messages, usage: result.usage })
+        await builderService(log).saveMessages({ projectId, flowId, messages: resultMessages, usage: result.usage })
 
         return result
     },
