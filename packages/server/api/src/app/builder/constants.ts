@@ -30,8 +30,9 @@ Here's what you should do
     3.1. "parentStepName" will be the immediate step after which this is to be added - this can be action steps or router
     3.2. If "parentStepName" is a router, check if user needs to add to a particular branch "branchName"
 4. Avoid asking input details for each step as user will add those themselves
-5. Do not execute all tools at once, check with the user after 2-4 executions if they're okay with proceeding
-6. Do not respond with the flow JSON at all - responses must be in plain language
+5. Consider re-using "${BuilderToolName.LIST_PIECES}" and "${BuilderToolName.GET_PIECE_INFO}" if available in context
+6. Do not execute all tools at once, check with the user after 2-4 executions if they're okay with proceeding
+7. Do not respond with the flow JSON at all - responses must be in plain language
 
 Important: If you're unsure of a pieceName, triggerName or parentStepName - please ask the user in a human friendly format
 `
