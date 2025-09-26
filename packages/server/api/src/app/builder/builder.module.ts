@@ -25,14 +25,14 @@ const builderController: FastifyPluginAsyncTypebox = async (app) => {
         const projectId = request.principal.projectId
         const userId = request.principal.id
         const { messages } = request.body
-        const result = await builderService(request.log).runAndUpdate({
+        const text = await builderService(request.log).runAndUpdate({
             userId,
             projectId,
             platformId,
             flowId: request.params.id,
             messages,
         })
-        return result.text
+        return text
     })
 }
 
@@ -64,7 +64,7 @@ const UpdateBuilderFlowRequestParams = {
             id: Type.String(),
         }),
         response: {
-            [StatusCodes.CREATED]: Type.Any(),
+            [StatusCodes.CREATED]: Type.String(),
         },
     },
     config: {

@@ -7,13 +7,11 @@ import {
     BranchExecutionType,
     DeleteActionRequest,
     DeleteBranchRequest,
-    Flow,
     FlowActionType,
     FlowOperationRequest,
     FlowOperationType,
     flowStructureUtil,
     FlowTriggerType,
-    FlowVersion,
     isNil,
     LocalesEnum,
     MoveActionRequest,
@@ -24,6 +22,7 @@ import {
 import { Tool, tool } from 'ai'
 import { z } from 'zod'
 import { flowService } from '../flows/flow/flow.service'
+import { flowVersionService } from '../flows/flow-version/flow-version.service'
 import { system } from '../helper/system/system'
 import { pieceMetadataService } from '../pieces/piece-metadata-service'
 import {
@@ -96,8 +95,8 @@ type BuilderParams = {
     platformId: string
     projectId: string
     userId: string
-    flow: Flow
-    flowVersion: FlowVersion
+    flowId: string
+    flowVersionId: string
 }
 
 enum ToolExecutionStatus {
@@ -105,7 +104,7 @@ enum ToolExecutionStatus {
     FAILURE = 'failure',
 }
 
-export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVersion }: BuilderParams): Record<string, Tool> => {
+export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowVersionId }: BuilderParams): Record<string, Tool> => {
     return {
         [BuilderToolName.LIST_PIECES]: tool({
             description: 'List all available pieces (and their names) with or without a search query',
@@ -209,8 +208,8 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
                     userId,
                     projectId,
                     platformId,
-                    flowId: flow.id,
-                    flowVersionId: flowVersion.id,
+                    flowId,
+                    flowVersionId,
                     operation,
                 })
 
@@ -243,6 +242,14 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
                 const propertySettings = getDefaultPropertySettingsForActionOrTrigger(pieceAction)
                 log.debug(input, 'piece action input')
                 log.debug(propertySettings, 'piece action propertySettings')
+
+                const flowVersion = await flowVersionService(log).getOne(flowVersionId)
+                if (isNil(flowVersion)) {
+                    return {
+                        status: ToolExecutionStatus.FAILURE,
+                        text: 'Unable to find flow with specified version',
+                    }
+                }
 
                 const parentStep = flowStructureUtil.getStep(parentStepName, flowVersion.trigger)
                 if (isNil(parentStep)) {
@@ -285,8 +292,8 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
                     userId,
                     projectId,
                     platformId,
-                    flowId: flow.id,
-                    flowVersionId: flowVersion.id,
+                    flowId,
+                    flowVersionId,
                     operation,
                 })
 
@@ -305,6 +312,13 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
                 log.info(params, 'move-action params')
 
                 const { parentStepName, stepName, routerName, routerBranchName } = params
+                const flowVersion = await flowVersionService(log).getOne(flowVersionId)
+                if (isNil(flowVersion)) {
+                    return {
+                        status: ToolExecutionStatus.FAILURE,
+                        text: 'Unable to find flow with specified version',
+                    }
+                }
 
                 const parentStep = flowStructureUtil.getStep(parentStepName, flowVersion.trigger)
                 let routerStepName = undefined
@@ -348,8 +362,8 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
                     userId,
                     projectId,
                     platformId,
-                    flowId: flow.id,
-                    flowVersionId: flowVersion.id,
+                    flowId,
+                    flowVersionId,
                     operation,
                 })
                 return {
@@ -376,8 +390,8 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
                     userId,
                     projectId,
                     platformId,
-                    flowId: flow.id,
-                    flowVersionId: flowVersion.id,
+                    flowId,
+                    flowVersionId,
                     operation,
                 })
 
@@ -422,8 +436,8 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
                     userId,
                     projectId,
                     platformId,
-                    flowId: flow.id,
-                    flowVersionId: flowVersion.id,
+                    flowId,
+                    flowVersionId,
                     operation,
                 })
 
@@ -440,6 +454,14 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
             }),
             execute: async ({ parentStepName }) => {
                 log.info({ parentStepName }, 'add-branch params')
+
+                const flowVersion = await flowVersionService(log).getOne(flowVersionId)
+                if (isNil(flowVersion)) {
+                    return {
+                        status: ToolExecutionStatus.FAILURE,
+                        text: 'Unable to find flow with specified version',
+                    }
+                }
 
                 const parentStep = flowStructureUtil.getStep(parentStepName, flowVersion.trigger)
 
@@ -476,8 +498,8 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
                     userId,
                     projectId,
                     platformId,
-                    flowId: flow.id,
-                    flowVersionId: flowVersion.id,
+                    flowId,
+                    flowVersionId,
                     operation,
                 })
 
@@ -495,6 +517,14 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
             }),
             execute: async ({ parentStepName, branchName }) => {
                 log.info({ parentStepName, branchName }, 'remove-branch params')
+
+                const flowVersion = await flowVersionService(log).getOne(flowVersionId)
+                if (isNil(flowVersion)) {
+                    return {
+                        status: ToolExecutionStatus.FAILURE,
+                        text: 'Unable to find flow with specified version',
+                    }
+                }
 
                 const parentStep = flowStructureUtil.getStep(parentStepName, flowVersion.trigger)
 
@@ -535,8 +565,8 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flow, flowVer
                     userId,
                     projectId,
                     platformId,
-                    flowId: flow.id,
-                    flowVersionId: flowVersion.id,
+                    flowId,
+                    flowVersionId,
                     operation,
                 })
 

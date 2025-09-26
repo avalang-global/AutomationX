@@ -120,6 +120,7 @@ const stripFlowVersionForAiPrompt = (flowVersion: FlowVersion): string => {
 
 const postProcessResult = (result: GenerateTextResult<ReturnType<typeof buildBuilderTools>, unknown>) => {
     const messages = [...result.response.messages]
+    const text = result.text
     const lastMessage = messages.at(-1)
 
     if (!lastMessage) {
@@ -155,6 +156,12 @@ const postProcessResult = (result: GenerateTextResult<ReturnType<typeof buildBui
                 content: 'I was not able to execute due to max step limit breach. Do you want me to try again from where it failed?',
             })
         }
+    }
+    else if (!text.length) {
+        messages.push({
+            role: 'assistant',
+            content: 'Looks like I was interrupted by the system. Is your query resolved or would you like me to check again?',
+        })
     }
 
     return messages
@@ -243,13 +250,13 @@ export const builderService = (log: FastifyBaseLogger) => ({
         }
         await builderMessagesRepo().insert(internalMessages)
     },
-    async runAndUpdate({ userId, projectId, platformId, flowId, messages }: RunParams): Promise<GenerateTextResult<ReturnType<typeof buildBuilderTools>, string>> {
+    async runAndUpdate({ userId, projectId, platformId, flowId, messages }: RunParams): Promise<string> {
         const flow = await flowService(log).getOneOrThrow({
             projectId,
             id: flowId,
         })
         const flowVersion = await flowVersionService(log).getLatestVersion(flowId, FlowVersionState.DRAFT)
-        assertNotNullOrUndefined(flowVersion, 'No draft flow version found')
+        assertNotNullOrUndefined(flowVersion, 'No latest flow version found')
 
         const systemWithFlowPrompt = builderSystemPrompt + '\n' + 'Current flow:\n' + stripFlowVersionForAiPrompt(flowVersion)
         // log.info(systemWithFlowPrompt)
@@ -272,7 +279,7 @@ export const builderService = (log: FastifyBaseLogger) => ({
                 userMessage,
                 ...oldModelMessages,
             ],
-            tools: buildBuilderTools({ userId, projectId, platformId, flow, flowVersion }),
+            tools: buildBuilderTools({ userId, projectId, platformId, flowId: flow.id, flowVersionId: flowVersion.id }),
         })
 
         const resultMessages = postProcessResult(result)
@@ -285,7 +292,7 @@ export const builderService = (log: FastifyBaseLogger) => ({
         await builderService(log).saveMessages({ projectId, flowId, messages: [ userMessage ] })
         await builderService(log).saveMessages({ projectId, flowId, messages: resultMessages, usage: result.usage })
 
-        return result
+        return result.text || resultMessages.at(-1)?.content.toString() || 'Something went wrong'
     },
 })
 
