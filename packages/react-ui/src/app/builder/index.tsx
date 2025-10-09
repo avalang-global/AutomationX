@@ -27,7 +27,7 @@ import { flowRunsApi } from '@/features/flow-runs/lib/flow-runs-api';
 import { piecesHooks } from '@/features/pieces/lib/pieces-hooks';
 import { flagsHooks } from '@/hooks/flags-hooks';
 import { platformHooks } from '@/hooks/platform-hooks';
-import { PromptMessage } from '@/features/flows/lib/prompt-flow-api';
+import { PromptMessage } from '@/features/flows/lib/prompt-to-flow-api';
 import {
   FlowActionType,
   ApEdition,
@@ -98,7 +98,7 @@ const constructContainerKey = ({
 const BuilderPage = () => {
   const location = useLocation();
   const { platform } = platformHooks.useCurrentPlatform();
-  const [setRun, flowVersion, leftSidebar, rightSidebar, run, selectedStep] =
+  const [setRun, flowVersion, leftSidebar, rightSidebar, run, selectedStep, setLeftSidebar] =
     useBuilderStateContext((state) => [
       state.setRun,
       state.flowVersion,
@@ -106,6 +106,7 @@ const BuilderPage = () => {
       state.rightSidebar,
       state.run,
       state.selectedStep,
+      state.setLeftSidebar,
     ]);
 
   const { data: edition } = flagsHooks.useFlag<ApEdition>(ApFlagId.EDITION);
@@ -146,22 +147,12 @@ const BuilderPage = () => {
   const rightHandleRef = useAnimateSidebar(rightSidebar);
   const leftHandleRef = useAnimateSidebar(leftSidebar);
   const rightSidePanelRef = useRef<HTMLDivElement>(null);
-  const messagesRef = useRef<PromptMessage[]>([]);
 
   useEffect(() => {
-    if (
-      !location.state ||
-      !Array.isArray(location.state.messages) ||
-      location.state.messages.length === 0
-    ) {
-      return;
-    }
-    console.log('location.state.messages', location.state.messages);
-    messagesRef.current = location.state.messages as PromptMessage[];
     if (location.search.includes(NEW_FLOW_WITH_AI_QUERY_PARAM)) {
       setLeftSidebar(LeftSideBarType.PROMPT_TO_FLOW);
     }
-  }, [location.state]);
+  }, [location.search]);
 
   const { pieceModel, refetch: refetchPiece } =
     piecesHooks.usePieceModelForStepSettings({
@@ -226,7 +217,7 @@ const BuilderPage = () => {
             {leftSidebar === LeftSideBarType.VERSIONS && <FlowVersionsList />}
             {leftSidebar === LeftSideBarType.AI_COPILOT && <CopilotSidebar />}
             {leftSidebar === LeftSideBarType.PROMPT_TO_FLOW && (
-              <PromptToFlowSidebar initMessages={messagesRef.current} />
+              <PromptToFlowSidebar />
             )}
           </div>
         </ResizablePanel>

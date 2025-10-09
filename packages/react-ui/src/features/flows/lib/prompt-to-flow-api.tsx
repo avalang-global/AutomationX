@@ -1,20 +1,12 @@
 // Custom
 import { api } from '@/lib/api';
+import { BuilderMessage, BuilderMessageRoleSchema } from '@activepieces/shared';
 import { Static, Type } from '@sinclair/typebox';
 
-export enum PromptMessageRoleEnum {
-  user = 'user',
-  assistant = 'assistant',
-}
-
-const PromptMessageRole = Type.Enum(PromptMessageRoleEnum);
-
-type PromptMessageRole = Static<typeof PromptMessageRole>;
-
 const PromptMessage = Type.Object({
-  role: PromptMessageRole,
+  role: BuilderMessageRoleSchema,
   content: Type.String(),
-  createdAt: Type.Optional(Type.String()), // ISO string
+  created: Type.Optional(Type.String()), // ISO string
 });
 
 export type PromptMessage = Static<typeof PromptMessage>;
@@ -24,5 +16,8 @@ export const promptFlowApi = {
     return api.post<string>(`/v1/builder/flow/${flowId}`, {
       messages,
     });
+  },
+  get(flowId: string): Promise<BuilderMessage[]> {
+    return api.get<BuilderMessage[]>(`/v1/builder/flow/${flowId}`);
   },
 };

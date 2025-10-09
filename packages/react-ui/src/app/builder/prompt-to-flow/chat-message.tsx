@@ -4,11 +4,11 @@ import { forwardRef } from 'react';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import {
   PromptMessage,
-  PromptMessageRoleEnum,
 } from '@/features/flows/lib/prompt-to-flow-api';
 import { flagsHooks } from '@/hooks/flags-hooks';
 import { userHooks } from '@/hooks/user-hooks';
 import { formatUtils } from '@/lib/utils';
+import { BuilderMessageRole } from '@activepieces/shared';
 
 interface ChatMessageProps {
   message: PromptMessage;
@@ -16,7 +16,7 @@ interface ChatMessageProps {
 
 export const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
   ({ message }, ref) => {
-    const isUser = message.role === PromptMessageRoleEnum.user;
+    const isUser = message.role === BuilderMessageRole.USER;
     const branding = flagsHooks.useWebsiteBranding();
     const { data: currentUser } = userHooks.useCurrentUser();
 
@@ -45,7 +45,7 @@ export const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
         }`.trim() || 'You'
       : 'AutomationX';
     const time = formatUtils.formatDate(
-      new Date(message.createdAt ?? new Date()),
+      new Date(message.created ?? new Date()),
     );
 
     return (
