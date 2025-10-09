@@ -124,13 +124,7 @@ export const PromptToFlowSidebar = () => {
 
   const handleInstantDisplayUserMessage = (message: PromptMessage) => {
     // This is for realtime display for user messages
-    const messagesToUpdate = [
-      ...messages,
-      {
-        ...message,
-        created: new Date().toISOString(),
-      },
-    ];
+    const messagesToUpdate = [...messages, message];
     setMessages(messagesToUpdate);
   };
 
