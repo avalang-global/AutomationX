@@ -86,6 +86,8 @@ import { AddTriggerNameToTriggerSource1757018269905 } from './migration/postgres
 import { AddIndexOnTriggerRun1757557714045 } from './migration/postgres/1757557714045-AddIndexOnTriggerRun'
 import { DeleteHandshakeFromTriggerSource1758108135968 } from './migration/postgres/1758108135968-DeleteHandshakeFromTriggerSource'
 import { AddBuilderMessageEntity1758704404389 } from './migration/postgres/1758704404389-add-builder-message-entity'
+import { RemoveFlowRunDisplayName1759772332795 } from './migration/postgres/1759772332795-RemoveFlowRunDisplayName'
+import { AddFlowVersionBackupFile1759964470862 } from './migration/postgres/1759964470862-AddFlowVersionBackupFile'
 
 const getSslConfig = (): boolean | TlsOptions => {
     const useSsl = system.get(AppSystemProp.POSTGRES_USE_SSL)
@@ -100,6 +102,8 @@ const getSslConfig = (): boolean | TlsOptions => {
 const getMigrations = (): (new () => MigrationInterface)[] => {
     const commonMigration: (new () => MigrationInterface)[] = [
         AddBuilderMessageEntity1758704404389,
+        AddFlowVersionBackupFile1759964470862,
+        RemoveFlowRunDisplayName1759772332795,
         AddIndexForAppEvents1759392852559,
         DeleteHandshakeFromTriggerSource1758108135968,
         AddFlowIndexToTriggerSource1757555419075,
