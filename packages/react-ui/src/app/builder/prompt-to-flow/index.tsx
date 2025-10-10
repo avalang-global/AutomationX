@@ -104,14 +104,14 @@ export const PromptToFlowSidebar = () => {
     },
     onSuccess: async (response: string) => {
       // Ignore direct response string; reload full conversation instead
-      await reloadMessages();
-      scrollToLastMessage();
       try {
+        await reloadMessages();
+        scrollToLastMessage();
         const freshFlow = await flowsApi.get(flow.id);
         setFlow(freshFlow);
         setVersion(freshFlow.version, true);
       } catch (e) {
-        console.error('Failed to reload flow after chat response', e);
+        console.error('Failed to reload messages or flow after chat response', e);
       }
     },
     onError: (error: any) => {
@@ -141,15 +141,15 @@ export const PromptToFlowSidebar = () => {
     if (trimmedInputMessage === '') {
       return;
     }
-    const messages = [
+    const toSendMessages = [
       {
         role: BuilderMessageRole.USER,
         content: inputMessage,
         created: new Date().toISOString(),
       },
     ];
-    handleInstantDisplayUserMessage(messages[0]);
-    mutate(messages);
+    handleInstantDisplayUserMessage(toSendMessages[0]);
+    mutate(toSendMessages);
     setInputMessage('');
     scrollToLastMessage();
   };
