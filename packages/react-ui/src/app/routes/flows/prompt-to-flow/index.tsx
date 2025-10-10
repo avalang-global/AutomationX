@@ -9,7 +9,6 @@ import { flowsApi } from '@/features/flows/lib/flows-api';
 import {
   promptFlowApi,
   PromptMessage,
-  PromptMessageRoleEnum,
 } from '@/features/flows/lib/prompt-to-flow-api';
 import { folderIdParamName } from '@/features/folders/component/folder-filter-list';
 import { foldersApi } from '@/features/folders/lib/folders-api';
@@ -18,6 +17,7 @@ import {
   NEW_FLOW_QUERY_PARAM,
   NEW_FLOW_WITH_AI_QUERY_PARAM,
 } from '@/lib/utils';
+import { BuilderMessageRole } from '@activepieces/shared';
 
 export function CreateFlowWithAI() {
   const [searchParams] = useSearchParams();
@@ -52,7 +52,7 @@ export function CreateFlowWithAI() {
       const nextMessages = [
         ...messages.current,
         {
-          role: PromptMessageRoleEnum.assistant,
+          role: BuilderMessageRole.ASSISTANT,
           content: response.message,
           createdAt: new Date().toISOString(),
         },
@@ -67,9 +67,9 @@ export function CreateFlowWithAI() {
   const handleSubmit = async () => {
     messages.current = [
       {
-        role: PromptMessageRoleEnum.user,
+        role: BuilderMessageRole.USER,
         content: prompt,
-        createdAt: new Date().toISOString(),
+        created: new Date().toISOString(),
       },
     ];
     sendMessage();

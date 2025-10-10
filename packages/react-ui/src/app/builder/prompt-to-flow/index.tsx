@@ -16,20 +16,18 @@ import { PromptInput } from '@/components/custom/prompt-input';
 import {
   promptFlowApi,
   PromptMessage,
-  PromptMessageRoleEnum,
 } from '@/features/flows/lib/prompt-to-flow-api';
+
 import { flowsApi } from '@/features/flows/lib/flows-api';
+import { BuilderMessage, BuilderMessageRole } from '@activepieces/shared';
+import { AssistantContent } from 'ai';
 
 const WELCOME_MESSAGE =
   "Hello! How can I help you today?\nYou can type the changes you'd like for this flow, and I'll help you create or modify it";
 
-export const PromptToFlowSidebar = ({
-  initMessages,
-}: {
-  initMessages: PromptMessage[];
-}) => {
+export const PromptToFlowSidebar = () => {
   const [isShowWelcomeMessage, setIsShowWelcomeMessage] = useState(false);
-  const [messages, setMessages] = useState<PromptMessage[]>(initMessages);
+  const [messages, setMessages] = useState<PromptMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [flow, setLeftSidebar, setFlow, setVersion] = useBuilderStateContext(
     (state) => [
@@ -37,11 +35,12 @@ export const PromptToFlowSidebar = ({
       state.setLeftSidebar,
       state.setFlow,
       state.setVersion,
-    ],
+    ]
   );
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
+
   const scrollToLastMessage = () => {
     setTimeout(() => {
       lastMessageRef.current?.scrollIntoView({
@@ -50,22 +49,70 @@ export const PromptToFlowSidebar = ({
     }, 1);
   };
 
+  const mapBuilderToPromptMessages = (
+    builderMessages: BuilderMessage[]
+  ): PromptMessage[] => {
+    const mappedMessages = builderMessages.map((m) => {
+      try {
+        if (m.role === BuilderMessageRole.TOOL) {
+          return null;
+        }
+
+        if (m.role === BuilderMessageRole.USER) {
+          return {
+            role: m.role,
+            content: JSON.parse(m.content),
+            created: m.created,
+          };
+        }
+
+        // Assistant messages
+        const jsonContent = JSON.parse(m.content) as AssistantContent
+        if (Array.isArray(jsonContent) && jsonContent[0]?.type === 'text') {
+          return {
+            role: m.role,
+            content: jsonContent?.[0]?.text,
+            created: m.created,
+          };
+        }
+        return null;
+      } catch (e) {
+        return null;
+      }
+    });
+
+    return mappedMessages.filter((m) => m !== null);
+  };
+
+  const reloadMessages = async () => {
+    if (!flow?.id) {
+      return;
+    }
+    try {
+      const serverMessages = await promptFlowApi.get(flow.id);
+      const mapped = mapBuilderToPromptMessages(serverMessages);
+      setMessages(mapped);
+      handleUpdateLocationState(mapped);
+      setIsShowWelcomeMessage(mapped.length === 0);
+    } catch (e) {
+      console.error('Failed to load conversation history', e);
+    }
+  };
+
   const { isPending, mutate } = useMutation({
     mutationFn: (messages: PromptMessage[]) => {
       return promptFlowApi.chat(flow.id, messages);
     },
     onSuccess: async (response: string) => {
-      handleAddNewMessage({
-        role: PromptMessageRoleEnum.assistant,
-        content: response,
-      });
-      scrollToLastMessage();
+      // Ignore direct response string; reload full conversation instead
       try {
+        await reloadMessages();
+        scrollToLastMessage();
         const freshFlow = await flowsApi.get(flow.id);
         setFlow(freshFlow);
         setVersion(freshFlow.version, true);
       } catch (e) {
-        console.error('Failed to reload flow after chat response', e);
+        console.error('Failed to reload messages or flow after chat response', e);
       }
     },
     onError: (error: any) => {
@@ -76,17 +123,10 @@ export const PromptToFlowSidebar = ({
     },
   });
 
-  const handleAddNewMessage = (message: PromptMessage) => {
-    const messagesToUpdate = [
-      ...messages,
-      {
-        ...message,
-        createdAt: new Date().toISOString(),
-      },
-    ];
+  const handleInstantDisplayUserMessage = (message: PromptMessage) => {
+    // This is for realtime display for user messages
+    const messagesToUpdate = [...messages, message];
     setMessages(messagesToUpdate);
-    handleUpdateLocationState(messagesToUpdate);
-    return messagesToUpdate;
   };
 
   const handleUpdateLocationState = (messages: PromptMessage[]) => {
@@ -102,11 +142,15 @@ export const PromptToFlowSidebar = ({
     if (trimmedInputMessage === '') {
       return;
     }
-    const messages = handleAddNewMessage({
-      role: PromptMessageRoleEnum.user,
-      content: inputMessage,
-    });
-    mutate(messages);
+    const toSendMessages = [
+      {
+        role: BuilderMessageRole.USER,
+        content: inputMessage,
+        created: new Date().toISOString(),
+      },
+    ];
+    handleInstantDisplayUserMessage(toSendMessages[0]);
+    mutate(toSendMessages);
     setInputMessage('');
     scrollToLastMessage();
   };
@@ -121,9 +165,8 @@ export const PromptToFlowSidebar = ({
     if (textAreaRef.current) {
       textAreaRef.current.focus();
     }
-    if (messages.length === 0) {
-      setIsShowWelcomeMessage(true);
-    }
+    // Load existing conversation history on mount
+    reloadMessages();
   }, []);
 
   useEffect(() => {
@@ -136,14 +179,14 @@ export const PromptToFlowSidebar = ({
 
   const welcomeMessage = useMemo(() => {
     return {
-      role: PromptMessageRoleEnum.assistant,
+      role: BuilderMessageRole.ASSISTANT,
       content: WELCOME_MESSAGE,
-      createdAt: new Date().toISOString(),
+      created: new Date().toISOString(),
     };
   }, []);
 
   return (
-    <div className='relative h-full'>
+    <div className="relative h-full">
       <div className="absolute top-0 bottom-0 flex flex-col">
         <SidebarHeader onClose={handleCloseSidebar}>AutomationX</SidebarHeader>
         <div className="pt-0 p-4 flex flex-col flex-grow overflow-hidden">
