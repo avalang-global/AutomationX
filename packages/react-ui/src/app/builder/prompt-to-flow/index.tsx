@@ -20,6 +20,7 @@ import {
 
 import { flowsApi } from '@/features/flows/lib/flows-api';
 import { BuilderMessage, BuilderMessageRole } from '@activepieces/shared';
+import { AssistantContent } from 'ai';
 
 const WELCOME_MESSAGE =
   "Hello! How can I help you today?\nYou can type the changes you'd like for this flow, and I'll help you create or modify it";
@@ -66,8 +67,8 @@ export const PromptToFlowSidebar = () => {
         }
 
         // Assistant messages
-        const jsonContent = JSON.parse(m.content);
-        if (jsonContent?.[0]?.type === 'text') {
+        const jsonContent = JSON.parse(m.content) as AssistantContent
+        if (Array.isArray(jsonContent) && jsonContent[0]?.type === 'text') {
           return {
             role: m.role,
             content: jsonContent?.[0]?.text,
