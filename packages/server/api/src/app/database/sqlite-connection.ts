@@ -76,6 +76,8 @@ import { AddIndexOnTriggerRunSqlite1757560231246 } from './migration/sqlite/1757
 import { DeleteHandshakeFromTriggerSourceSqlite1758108281602 } from './migration/sqlite/1758108281602-DeleteHandshakeFromTriggerSourceSqlite'
 import { RemoveDisplayNameSqlite1759876386359 } from './migration/sqlite/1759876386359-RemoveDisplayNameSqlite'
 import { AddFlowVersionBackupFileSqlite1759964539150 } from './migration/sqlite/1759964539150-AddFlowVersionBackupFileSqlite'
+import { AddRunFlowVersionIdForForeignKeySqlite1760346793809 } from './migration/sqlite/1760346793809-AddRunFlowVersionIdForForeignKeySqlite'
+import { AddProfilePictureSqlite1760504355077 } from './migration/sqlite/1760504355077-add-profile-picture-sqlite'
 
 const getSqliteDatabaseFilePath = (): string => {
     const apConfigDirectoryPath = system.getOrThrow(AppSystemProp.CONFIG_PATH)
@@ -98,6 +100,8 @@ const getSqliteDatabase = (): string => {
 
 const getMigrations = (): (new () => MigrationInterface)[] => {
     const communityMigrations: (new () => MigrationInterface)[] = [
+        AddProfilePictureSqlite1760504355077,
+        AddRunFlowVersionIdForForeignKeySqlite1760346793809,
         AddFlowVersionBackupFileSqlite1759964539150,
         RemoveDisplayNameSqlite1759876386359,
         AddIndexForAppEvents1759392852559,
