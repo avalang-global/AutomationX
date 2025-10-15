@@ -10,7 +10,7 @@ export enum BuilderToolName {
     REMOVE_BRANCH = 'remove-branch',
 }
 
-export const BuilderOpenAiModel = 'gpt-5-mini'
+export const BuilderOpenAiModel = 'gpt-4o'
 
 export const builderSystemPrompt = `
 You are a workflow builder agent.
