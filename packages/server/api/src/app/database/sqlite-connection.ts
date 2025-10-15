@@ -78,6 +78,7 @@ import { RemoveDisplayNameSqlite1759876386359 } from './migration/sqlite/1759876
 import { AddFlowVersionBackupFileSqlite1759964539150 } from './migration/sqlite/1759964539150-AddFlowVersionBackupFileSqlite'
 import { AddRunFlowVersionIdForForeignKeySqlite1760346793809 } from './migration/sqlite/1760346793809-AddRunFlowVersionIdForForeignKeySqlite'
 import { AddProfilePictureSqlite1760504355077 } from './migration/sqlite/1760504355077-add-profile-picture-sqlite'
+import { AddBuilderMessageEntity1760515329530 } from './migration/sqlite/1760515329530-add-builder-message-entity'
 
 const getSqliteDatabaseFilePath = (): string => {
     const apConfigDirectoryPath = system.getOrThrow(AppSystemProp.CONFIG_PATH)
@@ -100,6 +101,7 @@ const getSqliteDatabase = (): string => {
 
 const getMigrations = (): (new () => MigrationInterface)[] => {
     const communityMigrations: (new () => MigrationInterface)[] = [
+        AddBuilderMessageEntity1760515329530,
         AddProfilePictureSqlite1760504355077,
         AddRunFlowVersionIdForForeignKeySqlite1760346793809,
         AddFlowVersionBackupFileSqlite1759964539150,
