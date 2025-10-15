@@ -110,6 +110,12 @@ export const userIdentityService = (log: FastifyBaseLogger) => ({
             verified: true,
         })
     },
+    // Custom
+    async updateProfileImage(params: UpdateProfileImageParams): Promise<void> {
+        await userIdentityRepository().update(params.id, {
+            profileImageUrl: params.profileImageUrl ?? '',
+        })
+    },
 })
 
 
@@ -130,4 +136,9 @@ type UpdatePasswordParams = {
 type VerifyIdentityPasswordParams = {
     email: string
     password: string
+}
+
+type UpdateProfileImageParams = {
+    id: string
+    profileImageUrl: string | null
 }
