@@ -27,6 +27,7 @@ export const usersController: FastifyPluginAsyncTypebox = async (app) => {
             verified: true,
             projectId: req.principal.projectId,
             identityId: user.identityId!,
+            profileImageUrl: user.profileImageUrl,
         }
     })
 }
