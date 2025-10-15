@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Navigate, useParams, useSearchParams } from 'react-router-dom';
+import { Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import { useAuthorization } from '@/hooks/authorization-hooks';
 import { projectHooks } from '@/hooks/project-hooks';
@@ -85,6 +85,7 @@ type RedirectToCurrentProjectRouteProps = {
 const RedirectToCurrentProjectRoute: React.FC<
   RedirectToCurrentProjectRouteProps
 > = ({ path }) => {
+  const location = useLocation();
   const currentProjectId = authenticationSession.getProjectId();
   const params = useParams();
   const [searchParams] = useSearchParams();
@@ -113,6 +114,7 @@ const RedirectToCurrentProjectRoute: React.FC<
     <Navigate
       to={`/projects/${currentProjectId}${pathWithParamsAndSearchParams}`}
       replace
+      state={location.state}
     />
   );
 };
