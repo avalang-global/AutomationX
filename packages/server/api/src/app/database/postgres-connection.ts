@@ -89,6 +89,7 @@ import { AddBuilderMessageEntity1758704404389 } from './migration/postgres/17587
 import { RemoveFlowRunDisplayName1759772332795 } from './migration/postgres/1759772332795-RemoveFlowRunDisplayName'
 import { AddFlowVersionBackupFile1759964470862 } from './migration/postgres/1759964470862-AddFlowVersionBackupFile'
 import { AddRunFlowVersionIdForForeignKeyPostgres1760346454506 } from './migration/postgres/1760346454506-AddRunFlowVersionIdForForeignKeyPostgres'
+import { RestrictOnDeleteProjectForFlow1760376319952 } from './migration/postgres/1760376319952-RestrictOnDeleteProjectForFlow'
 import { AddProfilePicture1760504093297 } from './migration/postgres/1760504093297-add-profile-picture'
 
 const getSslConfig = (): boolean | TlsOptions => {
@@ -104,6 +105,7 @@ const getSslConfig = (): boolean | TlsOptions => {
 const getMigrations = (): (new () => MigrationInterface)[] => {
     const commonMigration: (new () => MigrationInterface)[] = [
         AddBuilderMessageEntity1758704404389,
+        RestrictOnDeleteProjectForFlow1760376319952,
         AddProfilePicture1760504093297,
         AddRunFlowVersionIdForForeignKeyPostgres1760346454506,
         AddFlowVersionBackupFile1759964470862,
