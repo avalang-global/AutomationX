@@ -38,7 +38,7 @@ export class AddBuilderMessageEntity1758704404389 implements MigrationInterface 
             ALTER TABLE "builder_message" DROP CONSTRAINT "FK_257ee9c3bc160ef16b2af94c334"
         `)
         await queryRunner.query(`
-            DROP INDEX "public"."idx_builder_message_project_flow"
+            DROP INDEX "idx_builder_message_project_flow"
         `)
         await queryRunner.query(`
             DROP TABLE "builder_message"
