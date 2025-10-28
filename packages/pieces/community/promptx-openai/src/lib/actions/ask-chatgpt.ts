@@ -119,7 +119,6 @@ export const askOpenAI = createAction({
         "Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the mode's likelihood to talk about new topics.",
       defaultValue: 0.6,
     }),
-    
     memoryKey: Property.ShortText({
       displayName: 'Memory Key',
       description:
@@ -213,7 +212,7 @@ export const askOpenAI = createAction({
     if (website && website.trim()) {
       // Use web search functionality
       const allowedDomains: string[] = [];
-      
+
       // Add domains from website property
       if (website) {
         const websiteDomains = website
@@ -264,7 +263,7 @@ export const askOpenAI = createAction({
       }
 
       const result = await response.json();
-      
+
       // Extract text content from the response output
       responseContent = result.output
         ?.find((item: any) => item.type === 'message')
