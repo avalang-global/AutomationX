@@ -3,14 +3,11 @@ import {
   PieceAuth,
   Property,
 } from '@activepieces/pieces-framework';
-import {
-  createCustomApiCallAction,
-} from '@activepieces/pieces-common';
 import { askOpenAI } from './lib/actions/ask-chatgpt';
 import { askAssistant } from './lib/actions/ask-assistant';
 import { visionPrompt } from './lib/actions/vision-prompt';
 import { extractStructuredDataAction } from './lib/actions/extract-structured-data-from-text';
-import { baseUrlMap, getAccessToken, getAiApiKey, PromptXAuthType } from './lib/common/pmtx-api';
+import { baseUrlMap } from './lib/common/pmtx-api';
 import { PieceCategory } from '@activepieces/shared';
 
 export const promptxAuth = PieceAuth.CustomAuth({
@@ -94,20 +91,6 @@ export const avalantOpenai = createPiece({
     'https://ml.oneweb.tech/public_img_main/images/PromptXAI/PromptXAI_0f345f3d9b6743f09e7d3db295973845.png',
   categories: [PieceCategory.ARTIFICIAL_INTELLIGENCE],
   authors: ['rupalbarman'],
-  actions: [askOpenAI, askAssistant, visionPrompt, 
-    extractStructuredDataAction,
-    createCustomApiCallAction({
-      auth: promptxAuth,
-      baseUrl: () => 'https://api.openai.com/v1',
-      authMapping: async (auth) => {
-        const promptxAuth = auth as PromptXAuthType;
-        const accessToken = await getAccessToken(promptxAuth);
-        const openaiApiKey = await getAiApiKey(promptxAuth.server, accessToken);
-        return {
-          Authorization: `Bearer ${openaiApiKey}`,
-        };
-      },
-    })
-  ],
+  actions: [askOpenAI, askAssistant, visionPrompt, extractStructuredDataAction],
   triggers: [],
 });
