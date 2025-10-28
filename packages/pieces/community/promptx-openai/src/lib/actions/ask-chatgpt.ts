@@ -270,6 +270,9 @@ export const askOpenAI = createAction({
         ?.content?.find((content: any) => content.type === 'output_text')
         ?.text || 'No response content found';
 
+      const inputTokens = await calculateMessagesTokenSize(inputMessages, model);
+      const outputTokens = await calculateMessagesTokenSize([{ role: 'assistant', content: responseContent }], model);
+      const totalTokens = inputTokens + outputTokens;
       // Create a mock completion object for compatibility
       completion = {
         choices: [{
@@ -279,9 +282,9 @@ export const askOpenAI = createAction({
           }
         }],
         usage: {
-          prompt_tokens: 0,
-          completion_tokens: 0,
-          total_tokens: 0,
+          prompt_tokens: inputTokens,
+          completion_tokens: outputTokens,
+          total_tokens: totalTokens,
         }
       };
     } else {
