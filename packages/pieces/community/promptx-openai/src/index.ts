@@ -10,7 +10,6 @@ import { askOpenAI } from './lib/actions/ask-chatgpt';
 import { askAssistant } from './lib/actions/ask-assistant';
 import { visionPrompt } from './lib/actions/vision-prompt';
 import { extractStructuredDataAction } from './lib/actions/extract-structured-data-from-text';
-import { searchWebsite } from './lib/actions/search-website';
 import { baseUrlMap, getAccessToken, getAiApiKey, PromptXAuthType } from './lib/common/pmtx-api';
 import { PieceCategory } from '@activepieces/shared';
 
@@ -96,7 +95,7 @@ export const avalantOpenai = createPiece({
   categories: [PieceCategory.ARTIFICIAL_INTELLIGENCE],
   authors: ['rupalbarman'],
   actions: [askOpenAI, askAssistant, visionPrompt, 
-    extractStructuredDataAction, searchWebsite,
+    extractStructuredDataAction,
     createCustomApiCallAction({
       auth: promptxAuth,
       baseUrl: () => 'https://api.openai.com/v1',

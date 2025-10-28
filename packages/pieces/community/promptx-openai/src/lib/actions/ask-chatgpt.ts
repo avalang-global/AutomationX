@@ -119,6 +119,7 @@ export const askOpenAI = createAction({
         "Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the mode's likelihood to talk about new topics.",
       defaultValue: 0.6,
     }),
+    
     memoryKey: Property.ShortText({
       displayName: 'Memory Key',
       description:
@@ -132,6 +133,11 @@ export const askOpenAI = createAction({
       defaultValue: [
         { role: 'system', content: 'You are a helpful assistant.' },
       ],
+    }),
+    website: Property.ShortText({
+      displayName: 'Website Domains',
+      description: 'Website domains to search (multiple websites separated by commas, e.g., "example.com, github.com"). Leave empty to use regular ChatGPT without web search.',
+      required: false,
     }),
   },
   async run({ auth, propsValue, store, flows, project }) {
@@ -154,6 +160,7 @@ export const askOpenAI = createAction({
       presencePenalty,
       prompt,
       memoryKey,
+      website,
     } = propsValue;
 
     const usage = await getUsagePlan(promptxAuth.server, accessToken);
@@ -166,6 +173,7 @@ export const askOpenAI = createAction({
     await propsValidation.validateZod(propsValue, {
       temperature: z.number().min(0).max(1).optional(),
       memoryKey: z.string().max(128).optional(),
+      website: z.string().optional(),
     });
 
     const openai = new OpenAI({ apiKey });
@@ -199,16 +207,96 @@ export const askOpenAI = createAction({
       };
     });
 
-    // Send prompt
-    const completion = await openai.chat.completions.create({
-      model: model,
-      messages: [...roles, ...messageHistory],
-      temperature: temperature,
-      top_p: topP,
-      frequency_penalty: frequencyPenalty,
-      presence_penalty: presencePenalty,
-      max_completion_tokens: Math.floor(maxTokens),
-    });
+    let completion: any;
+    let responseContent: string;
+
+    if (website && website.trim()) {
+      // Use web search functionality
+      const allowedDomains: string[] = [];
+      
+      // Add domains from website property
+      if (website) {
+        const websiteDomains = website
+          .split(',')
+          .map((domain: string) => domain.trim())
+          .filter((domain: string) => domain.length > 0);
+        allowedDomains.push(...websiteDomains);
+      }
+
+      // Build input messages for web search
+      const inputMessages = [
+        ...roles,
+        ...messageHistory,
+      ];
+
+      const requestBody = {
+        input: inputMessages,
+        model: model,
+        tools: [
+          {
+            type: 'web_search',
+            filters: {
+              allowed_domains: allowedDomains,
+            },
+          },
+        ],
+        include: [
+          'web_search_call.action.sources',
+        ],
+        reasoning: {
+          effort: 'low',
+        },
+        tool_choice: 'auto',
+      };
+
+      const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Web search API request failed with status ${response.status}: ${errorData}`);
+      }
+
+      const result = await response.json();
+      
+      // Extract text content from the response output
+      responseContent = result.output
+        ?.find((item: any) => item.type === 'message')
+        ?.content?.find((content: any) => content.type === 'output_text')
+        ?.text || 'No response content found';
+
+      // Create a mock completion object for compatibility
+      completion = {
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: responseContent,
+          }
+        }],
+        usage: {
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0,
+        }
+      };
+    } else {
+      // Send prompt using regular chat completion
+      completion = await openai.chat.completions.create({
+        model: model,
+        messages: [...roles, ...messageHistory],
+        temperature: temperature,
+        top_p: topP,
+        frequency_penalty: frequencyPenalty,
+        presence_penalty: presencePenalty,
+        max_completion_tokens: Math.floor(maxTokens),
+      });
+    }
 
     // Add response to message history
     messageHistory = [...messageHistory, completion.choices[0].message];
