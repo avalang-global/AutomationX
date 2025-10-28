@@ -207,46 +207,13 @@ export const askOpenAI = createAction({
     });
 
     let completion: any;
-    let responseContent: string;
 
     if (website && website.trim()) {
-      // Use web search functionality
-      const allowedDomains: string[] = [];
-
-      // Add domains from website property
-      if (website) {
-        const websiteDomains = website
-          .split(',')
-          .map((domain: string) => domain.trim())
-          .filter((domain: string) => domain.length > 0);
-        allowedDomains.push(...websiteDomains);
-      }
-
-      // Build input messages for web search
-      const inputMessages = [
-        ...roles,
-        ...messageHistory,
-      ];
-
-      const requestBody = {
-        input: inputMessages,
-        model: model,
-        tools: [
-          {
-            type: 'web_search',
-            filters: {
-              allowed_domains: allowedDomains,
-            },
-          },
-        ],
-        include: [
-          'web_search_call.action.sources',
-        ],
-        reasoning: {
-          effort: 'low',
-        },
-        tool_choice: 'auto',
-      };
+      // Use web search functionality with responses.create
+      const allowedDomains = website
+        .split(',')
+        .map((domain: string) => domain.trim())
+        .filter((domain: string) => domain.length > 0);
 
       const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
@@ -254,7 +221,23 @@ export const askOpenAI = createAction({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          input: [...roles, ...messageHistory],
+          model: model,
+          tools: [
+            {
+              type: 'web_search',
+              filters: {
+                allowed_domains: allowedDomains,
+              },
+            },
+          ],
+          include: ['web_search_call.action.sources'],
+          reasoning: {
+            effort: 'low',
+          },
+          tool_choice: 'auto',
+        }),
       });
 
       if (!response.ok) {
@@ -265,15 +248,12 @@ export const askOpenAI = createAction({
       const result = await response.json();
 
       // Extract text content from the response output
-      responseContent = result.output
+      const responseContent = result.output
         ?.find((item: any) => item.type === 'message')
         ?.content?.find((content: any) => content.type === 'output_text')
         ?.text || 'No response content found';
 
-      const inputTokens = await calculateMessagesTokenSize(inputMessages, model);
-      const outputTokens = await calculateMessagesTokenSize([{ role: 'assistant', content: responseContent }], model);
-      const totalTokens = inputTokens + outputTokens;
-      // Create a mock completion object for compatibility
+      // Create a completion object for compatibility using actual usage data
       completion = {
         choices: [{
           message: {
@@ -282,9 +262,9 @@ export const askOpenAI = createAction({
           }
         }],
         usage: {
-          prompt_tokens: inputTokens,
-          completion_tokens: outputTokens,
-          total_tokens: totalTokens,
+          prompt_tokens: result.usage?.input_tokens || 0,
+          completion_tokens: result.usage?.output_tokens || 0,
+          total_tokens: result.usage?.total_tokens || 0,
         }
       };
     } else {
