@@ -261,15 +261,12 @@ export const builderService = (log: FastifyBaseLogger) => ({
         log.info(systemWithFlowPrompt)
 
         const userMessage: UserModelMessage = { role: 'user', content: messages[messages.length - 1].content }
-        log.warn(JSON.stringify(messages), 'messages')
-        log.warn(JSON.stringify(userMessage), 'user message')
         const oldMessages = await builderService(log).fetchMessages({ projectId, flowId, limit: 10 })
         const oldModelMessages: ModelMessage[] = oldMessages.map((o) => {
             if (o.role === BuilderMessageRole.ASSISTANT) return { role: 'assistant', content: o.content }
             if (o.role === BuilderMessageRole.USER) return { role: 'user', content: o.content }
             return { role: 'tool', content: o.content as unknown as ToolContent }
         })
-        log.info(JSON.stringify(oldModelMessages))
 
         const model = await selectOpenAiModel(platformId, projectId)
         const result = await generateText({
