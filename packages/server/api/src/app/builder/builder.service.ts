@@ -258,7 +258,6 @@ export const builderService = (log: FastifyBaseLogger) => ({
         assertNotNullOrUndefined(flowVersion, 'No latest flow version found')
 
         const systemWithFlowPrompt = builderSystemPrompt + '\n' + 'Current flow:\n' + stripFlowVersionForAiPrompt(flowVersion)
-        log.info(systemWithFlowPrompt)
 
         const userMessage: UserModelMessage = { role: 'user', content: messages[messages.length - 1].content }
         const oldMessages = await builderService(log).fetchMessages({ projectId, flowId, limit: 10 })
