@@ -88,11 +88,10 @@ const stripFlowVersionForAiPrompt = (flowVersion: FlowVersion): string => {
             // Remove unneeded step settings metadata
             if (cleaned.settings) {
                 delete cleaned.settings.errorHandlingOptions
-                delete cleaned.settings.inputUiInfo
                 delete cleaned.settings.connectionIds
                 delete cleaned.settings.agentIds
                 delete cleaned.settings.input
-                delete cleaned.settings.inputUiInfo // duplicate remove to be safe
+                delete cleaned.settings.propertySettings
             }
 
             // Remove extra fields from triggers
@@ -259,16 +258,18 @@ export const builderService = (log: FastifyBaseLogger) => ({
         assertNotNullOrUndefined(flowVersion, 'No latest flow version found')
 
         const systemWithFlowPrompt = builderSystemPrompt + '\n' + 'Current flow:\n' + stripFlowVersionForAiPrompt(flowVersion)
-        // log.info(systemWithFlowPrompt)
+        log.info(systemWithFlowPrompt)
 
         const userMessage: UserModelMessage = { role: 'user', content: messages[messages.length - 1].content }
+        log.warn(JSON.stringify(messages), 'messages')
+        log.warn(JSON.stringify(userMessage), 'user message')
         const oldMessages = await builderService(log).fetchMessages({ projectId, flowId, limit: 10 })
         const oldModelMessages: ModelMessage[] = oldMessages.map((o) => {
             if (o.role === BuilderMessageRole.ASSISTANT) return { role: 'assistant', content: o.content }
             if (o.role === BuilderMessageRole.USER) return { role: 'user', content: o.content }
             return { role: 'tool', content: o.content as unknown as ToolContent }
         })
-        // log.info(JSON.stringify(oldModelMessages))
+        log.info(JSON.stringify(oldModelMessages))
 
         const model = await selectOpenAiModel(platformId, projectId)
         const result = await generateText({
@@ -276,8 +277,8 @@ export const builderService = (log: FastifyBaseLogger) => ({
             stopWhen: stepCountIs(STEP_COUNT_LIMIT),
             messages: [
                 { role: 'system', content: systemWithFlowPrompt },
-                userMessage,
                 ...oldModelMessages,
+                userMessage,
             ],
             tools: buildBuilderTools({ userId, projectId, platformId, flowId: flow.id, flowVersionId: flowVersion.id }),
         })

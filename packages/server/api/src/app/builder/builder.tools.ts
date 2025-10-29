@@ -224,7 +224,6 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
             description: 'Create a flow action in the workflow',
             inputSchema: z.object({
                 parentStepName: z.string({ description: 'Name of the parent step under which action is to be added' }),
-                stepName: z.string({ description: 'Unique name of the step (step_1, step_2 etc)' }),
                 branchName: z.optional(z.string({ description: 'Branch in which the step needs to be added (when parentStepName is a router name)' })),
                 pieceName: z.string(),
                 pieceVersion: z.string(),
@@ -232,7 +231,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
             }),
             execute: async (params) => {
                 log.info(params, 'add-action params')
-                const { parentStepName, stepName, branchName, pieceName, pieceVersion, pieceActionName } = params
+                const { parentStepName, branchName, pieceName, pieceVersion, pieceActionName } = params
                 validatePieceNameOrThrow(pieceName)
 
                 const metadata = await pieceMetadataService(log).getOrThrow({ name: pieceName, version: pieceVersion, platformId, projectId })
@@ -259,6 +258,9 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                     }
                 }
 
+                const stepName = flowStructureUtil.findUnusedName(flowVersion.trigger)
+                log.warn(`Unused step name ${stepName}`)
+                log.warn(JSON.stringify(flowVersion.trigger))
                 const isParentARouter = parentStep.type === FlowActionType.ROUTER
                 const branchIndex = isParentARouter && branchName ? parentStep.settings.branches.findIndex(branch => branch.branchName === branchName) : undefined
 
@@ -405,10 +407,18 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
             description: 'Add a router step in the flow. Router consists of branches which are triggered based on some condition',
             inputSchema: z.object({
                 parentStepName: z.string({ description: 'Name of the parent step' }),
-                stepName: z.string({ description: 'Unique name of the step (step_1, step_2 etc' }),
             }),
-            execute: async ({ parentStepName, stepName }) => {
-                log.info({ parentStepName, stepName }, 'add-router params')
+            execute: async ({ parentStepName }) => {
+                log.info({ parentStepName }, 'add-router params')
+
+                const flowVersion = await flowVersionService(log).getOne(flowVersionId)
+                if (isNil(flowVersion)) {
+                    return {
+                        status: ToolExecutionStatus.FAILURE,
+                        text: 'Unable to find flow with specified version',
+                    }
+                }
+                const stepName = flowStructureUtil.findUnusedName(flowVersion.trigger)
                 const request: AddActionRequest = {
                     parentStep: parentStepName,
                     stepLocationRelativeToParent: StepLocationRelativeToParent.AFTER,
