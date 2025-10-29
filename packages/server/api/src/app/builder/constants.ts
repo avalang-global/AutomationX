@@ -2,7 +2,7 @@ export enum BuilderToolName {
     LIST_PIECES = 'list-pieces',
     GET_PIECE_INFO = 'get-piece-information',
     UPDATE_TRIGGER = 'update-trigger',
-    ADD_ACTION = 'add-action',
+    ADD_ACTION = 'add-bulk-actions',
     MOVE_ACTION = 'move-action',
     REMOVE_ACTION = 'remove-action',
     ADD_ROUTER = 'add-router',
