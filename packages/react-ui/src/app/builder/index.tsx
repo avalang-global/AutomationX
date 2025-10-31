@@ -98,6 +98,7 @@ const constructContainerKey = ({
 const BuilderPage = () => {
   const location = useLocation();
   const { platform } = platformHooks.useCurrentPlatform();
+  const [creditUsage, setCreditUsage] = useState(0);
   const [setRun, flowVersion, leftSidebar, rightSidebar, run, selectedStep, setLeftSidebar] =
     useBuilderStateContext((state) => [
       state.setRun,
@@ -196,7 +197,7 @@ const BuilderPage = () => {
   return (
     <div className="flex h-full w-full flex-col relative">
       <div className="z-50">
-        <BuilderHeader />
+        <BuilderHeader creditUsage={creditUsage} />
       </div>
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel
@@ -217,7 +218,7 @@ const BuilderPage = () => {
             {leftSidebar === LeftSideBarType.VERSIONS && <FlowVersionsList />}
             {leftSidebar === LeftSideBarType.AI_COPILOT && <CopilotSidebar />}
             {leftSidebar === LeftSideBarType.PROMPT_TO_FLOW && (
-              <PromptToFlowSidebar />
+              <PromptToFlowSidebar onCreditUsageChange={setCreditUsage} />
             )}
           </div>
         </ResizablePanel>

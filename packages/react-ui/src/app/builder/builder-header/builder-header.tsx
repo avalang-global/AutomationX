@@ -43,7 +43,7 @@ import {
 import FlowActionMenu from '../../components/flow-actions-menu';
 import { BuilderFlowStatusSection } from '../builder-flow-status-section';
 
-export const BuilderHeader = () => {
+export const BuilderHeader = ({ creditUsage }: { creditUsage?: number }) => {
   const [queryParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -174,6 +174,11 @@ export const BuilderHeader = () => {
 
         <div className="grow"></div>
         <div className="flex items-center justify-center gap-4">
+          {!!creditUsage && (
+            <div className="px-1 text-sm text-muted-foreground">
+              Credits Used: {creditUsage.toFixed(2)}
+            </div>
+          )}
           <Button
             variant="ghost"
             className="gap-2 px-2"
