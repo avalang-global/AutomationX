@@ -35,7 +35,7 @@ export const PromptToFlowSidebar = ({
 }: {
   onCreditUsageChange?: (creditUsage: number) => void;
 }) => {
-  const { data: BOTX_API_URL } = flagsHooks.useFlag<string>(ApFlagId.BOTX_URL);
+  const { data: ZERO_API_URL } = flagsHooks.useFlag<string>(ApFlagId.ZERO_SERVICE_URL);
   const [isShowWelcomeMessage, setIsShowWelcomeMessage] = useState(false);
   const [messages, setMessages] = useState<PromptMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -110,12 +110,12 @@ export const PromptToFlowSidebar = ({
   };
 
   const reloadCreditUsage = async () => {
-    if (!BOTX_API_URL || !flow?.id) {
+    if (!ZERO_API_URL || !flow?.id) {
       return;
     }
     try {
       const creditUsage = await promptFlowApi.getCreditUsage(
-        BOTX_API_URL,
+        ZERO_API_URL,
         flow.projectId,
         flow.id
       );
