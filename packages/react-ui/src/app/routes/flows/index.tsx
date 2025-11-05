@@ -16,7 +16,7 @@ import { Permission } from '@activepieces/shared';
 
 import { FlowsTable } from './flows-table';
 import { IssuesTable } from './issues-table';
-import { CreateFlowWithAI } from './prompt-to-flow';
+import { CreateFlowWithAI } from '../quick-start/prompt-to-flow';
 
 export enum FlowsPageTabs {
   RUNS = 'runs',

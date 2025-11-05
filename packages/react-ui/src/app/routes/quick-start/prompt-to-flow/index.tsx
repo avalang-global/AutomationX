@@ -82,7 +82,7 @@ export function CreateFlowWithAI() {
           'Describe your automation flow (e.g., "Send welcome email to new users, add to CRM, and schedule follow-up task after 2 days")',
         )}
         className="w-full"
-        minRows={2}
+        minRows={3}
         maxRows={5}
         value={prompt}
         onChange={setPrompt}
