@@ -188,9 +188,9 @@ const QuickStartPage = () => {
                   maxNumberOfIconsToShow={3}
                 />
               </div>
-              <ScrollArea className="min-h-[156px] h-[calc(70vh-144px)] max-h-[536px]">
+              <ScrollArea className="min-h-[128px] max-h-[320px]">
                 <ApMarkdown
-                  markdown={selectedTemplate?.description}
+                  markdown={selectedTemplate?.description ?? "No description available"}
                   variant={MarkdownVariant.BORDERLESS}
                 />
 

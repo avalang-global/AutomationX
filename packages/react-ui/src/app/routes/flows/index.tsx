@@ -16,7 +16,6 @@ import { Permission } from '@activepieces/shared';
 
 import { FlowsTable } from './flows-table';
 import { IssuesTable } from './issues-table';
-import { CreateFlowWithAI } from '../quick-start/prompt-to-flow';
 
 export enum FlowsPageTabs {
   RUNS = 'runs',
@@ -68,52 +67,47 @@ const FlowsPage = () => {
     }
   };
 
-  // Converted from a normal to a tab view for prompt to workflow feature
-
   return (
-    <Tabs
-      value={activeTab}
-      onValueChange={(v) => handleTabChange(v as FlowsPageTabs)}
-      className="w-full"
-    >
-      <div className="flex flex-col gap-4 w-full grow">
-        <DashboardPageHeader
-          tutorialTab="flows"
-          title={t('Flows')}
-          description={t(
-            'Create and manage your flows, run history and run issues',
-          )}
-          middleChildren={
-            !embedState.hideFlowsPageNavbar && (
-              <TabsList variant="outline">
-                <TabsTrigger value={FlowsPageTabs.FLOWS} variant="outline">
-                  <Workflow className="h-4 w-4 mr-2" />
-                  {t('Flows')}
-                </TabsTrigger>
-                {checkAccess(Permission.READ_RUN) && (
-                  <TabsTrigger value={FlowsPageTabs.RUNS} variant="outline">
-                    <History className="h-4 w-4 mr-2" />
-                    {t('Runs')}
-                  </TabsTrigger>
-                )}
-                {checkAccess(Permission.READ_ISSUES) && (
-                  <TabsTrigger value={FlowsPageTabs.ISSUES} variant="outline">
-                    <CircleAlert className="h-4 w-4 mr-2" />
-                    <span className="flex items-center gap-2">
-                      {t('Issues')}
-                      {showIssuesNotification && (
-                        <span className="ml-1 inline-block w-2 h-2 bg-red-500 rounded-full"></span>
-                      )}
-                    </span>
-                  </TabsTrigger>
-                )}
-              </TabsList>
-            )
-          }
-        ></DashboardPageHeader>
-
-        {activeTab === FlowsPageTabs.FLOWS && <CreateFlowWithAI />}
-
+    <div className="flex flex-col gap-4 w-full grow">
+      <DashboardPageHeader
+        tutorialTab="flows"
+        title={t('Flows')}
+        description={t(
+          'Create and manage your flows, run history and run issues',
+        )}
+      ></DashboardPageHeader>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => handleTabChange(v as FlowsPageTabs)}
+        className="w-full"
+      >
+        {!embedState.hideFlowsPageNavbar ? (
+          <TabsList variant="outline">
+            <TabsTrigger value={FlowsPageTabs.FLOWS} variant="outline">
+              <Workflow className="h-4 w-4 mr-2" />
+              {t('Flows')}
+            </TabsTrigger>
+            {checkAccess(Permission.READ_RUN) && (
+              <TabsTrigger value={FlowsPageTabs.RUNS} variant="outline">
+                <History className="h-4 w-4 mr-2" />
+                {t('Runs')}
+              </TabsTrigger>
+            )}
+            {checkAccess(Permission.READ_ISSUES) && (
+              <TabsTrigger value={FlowsPageTabs.ISSUES} variant="outline">
+                <CircleAlert className="h-4 w-4 mr-2" />
+                <span className="flex items-center gap-2">
+                  {t('Issues')}
+                  {showIssuesNotification && (
+                    <span className="ml-1 inline-block w-2 h-2 bg-red-500 rounded-full"></span>
+                  )}
+                </span>
+              </TabsTrigger>
+            )}
+          </TabsList>
+        ) : (
+          <></>
+        )}
         <TabsContent value={FlowsPageTabs.FLOWS}>
           <FlowsTable />
         </TabsContent>
@@ -123,8 +117,8 @@ const FlowsPage = () => {
         <TabsContent value={FlowsPageTabs.ISSUES}>
           <IssuesTable />
         </TabsContent>
-      </div>
-    </Tabs>
+      </Tabs>
+    </div>
   );
 };
 
