@@ -19,13 +19,23 @@ import {
 } from '@/features/flows/lib/prompt-to-flow-api';
 
 import { flowsApi } from '@/features/flows/lib/flows-api';
-import { BuilderMessage, BuilderMessageRole } from '@activepieces/shared';
+import {
+  ApFlagId,
+  BuilderMessage,
+  BuilderMessageRole,
+} from '@activepieces/shared';
 import { AssistantContent } from 'ai';
+import { flagsHooks } from '@/hooks/flags-hooks';
 
 const WELCOME_MESSAGE =
   "Hello! How can I help you today?\nYou can type the changes you'd like for this flow, and I'll help you create or modify it";
 
-export const PromptToFlowSidebar = () => {
+export const PromptToFlowSidebar = ({
+  onCreditUsageChange,
+}: {
+  onCreditUsageChange?: (creditUsage: number) => void;
+}) => {
+  const { data: ZERO_API_URL } = flagsHooks.useFlag<string>(ApFlagId.ZERO_SERVICE_URL);
   const [isShowWelcomeMessage, setIsShowWelcomeMessage] = useState(false);
   const [messages, setMessages] = useState<PromptMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -67,7 +77,7 @@ export const PromptToFlowSidebar = () => {
         }
 
         // Assistant messages
-        const jsonContent = JSON.parse(m.content) as AssistantContent
+        const jsonContent = JSON.parse(m.content) as AssistantContent;
         if (Array.isArray(jsonContent) && jsonContent[0]?.type === 'text') {
           return {
             role: m.role,
@@ -99,6 +109,22 @@ export const PromptToFlowSidebar = () => {
     }
   };
 
+  const reloadCreditUsage = async () => {
+    if (!ZERO_API_URL || !flow?.id) {
+      return;
+    }
+    try {
+      const creditUsage = await promptFlowApi.getCreditUsage(
+        ZERO_API_URL,
+        flow.projectId,
+        flow.id
+      );
+      onCreditUsageChange?.(creditUsage);
+    } catch (e) {
+      console.error('Failed to load credit usage', e);
+    }
+  };
+
   const { isPending, mutate } = useMutation({
     mutationFn: (messages: PromptMessage[]) => {
       return promptFlowApi.chat(flow.id, messages);
@@ -107,12 +133,16 @@ export const PromptToFlowSidebar = () => {
       // Ignore direct response string; reload full conversation instead
       try {
         await reloadMessages();
+        reloadCreditUsage();
         scrollToLastMessage();
         const freshFlow = await flowsApi.get(flow.id);
         setFlow(freshFlow);
         setVersion(freshFlow.version, true);
       } catch (e) {
-        console.error('Failed to reload messages or flow after chat response', e);
+        console.error(
+          'Failed to reload messages or flow after chat response',
+          e
+        );
       }
     },
     onError: (error: any) => {
