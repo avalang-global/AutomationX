@@ -1,8 +1,16 @@
+import {
+  FlowOperationType,
+  FlowTemplate,
+  PopulatedFlow,
+  MarkdownVariant,
+} from '@activepieces/shared';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { t } from 'i18next';
 import { Info } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+import { CreateFlowWithAI } from './prompt-to-flow';
 
 import { ApMarkdown } from '@/components/custom/markdown';
 import { Button } from '@/components/ui/button';
@@ -19,17 +27,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { flowsApi } from '@/features/flows/lib/flows-api';
 import { PieceIconList } from '@/features/pieces/components/piece-icon-list';
 import { templatesApi } from '@/features/templates/lib/templates-api';
-import { flowsApi } from '@/features/flows/lib/flows-api';
 import { authenticationSession } from '@/lib/authentication-session';
-import {
-  FlowOperationType,
-  FlowTemplate,
-  PopulatedFlow,
-  MarkdownVariant,
-} from '@activepieces/shared';
-import { CreateFlowWithAI } from './prompt-to-flow';
 
 type TemplateCardProps = {
   template: FlowTemplate;
@@ -108,14 +109,14 @@ const TemplateCard = ({ template, onSelectTemplate }: TemplateCardProps) => {
 const QuickStartPage = () => {
   const navigate = useNavigate();
   const [selectedTemplate, setSelectedTemplate] = useState<FlowTemplate | null>(
-    null
+    null,
   );
 
   const { data: templates, isLoading } = useQuery<FlowTemplate[], Error>({
     queryKey: ['community-templates'],
     queryFn: async () => {
       const communityTemplates = await templatesApi.listCommunity();
-      return communityTemplates.data.slice(0, 12);
+      return communityTemplates.data.slice(0, 15);
     },
     staleTime: 0,
   });
@@ -141,14 +142,14 @@ const QuickStartPage = () => {
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg">
-              {t('Start automate with community templates')}
+              {t('Start quick with community templates')}
             </h2>
             <Button
               variant="outline-primary"
               className="gap-2"
               onClick={() => navigate('/flows')}
             >
-              {t('Browse all templates')}
+              {t('Your flows')}
             </Button>
           </div>
 
@@ -190,7 +191,9 @@ const QuickStartPage = () => {
               </div>
               <ScrollArea className="min-h-[128px] max-h-[320px]">
                 <ApMarkdown
-                  markdown={selectedTemplate?.description ?? "No description available"}
+                  markdown={
+                    selectedTemplate?.description ?? 'No description available'
+                  }
                   variant={MarkdownVariant.BORDERLESS}
                 />
 

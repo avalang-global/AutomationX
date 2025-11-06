@@ -1,4 +1,5 @@
 // Custom
+import { BuilderMessageRole } from '@activepieces/shared';
 import { useMutation } from '@tanstack/react-query';
 import { t } from 'i18next';
 import { useState, useRef } from 'react';
@@ -17,7 +18,7 @@ import {
   NEW_FLOW_QUERY_PARAM,
   NEW_FLOW_WITH_AI_QUERY_PARAM,
 } from '@/lib/utils';
-import { BuilderMessageRole } from '@activepieces/shared';
+
 
 export function CreateFlowWithAI() {
   const [searchParams] = useSearchParams();

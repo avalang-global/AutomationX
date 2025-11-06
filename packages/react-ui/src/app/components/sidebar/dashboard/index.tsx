@@ -120,9 +120,13 @@ export function ProjectDashboardSidebar() {
     isSubItem: false,
   };
 
-  const items = [quickStartLink, flowsLink, tablesLink, todosLink, releasesLink].filter(
-    permissionFilter,
-  );
+  const items = [
+    quickStartLink,
+    flowsLink,
+    tablesLink,
+    todosLink,
+    releasesLink,
+  ].filter(permissionFilter);
 
   const otherItems: SidebarItemType[] = [
     {
