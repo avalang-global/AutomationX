@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { CreateFlowWithAI } from './prompt-to-flow';
 
+import { DashboardPageHeader } from '@/components/custom/dashboard-page-header';
 import { ApMarkdown } from '@/components/custom/markdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -141,53 +142,56 @@ const QuickStartPage = () => {
   };
 
   return (
-    <>
-      <div className="px-6 py-3 -mx-4 mb-4 flex flex-col gap-6 w-full">
-        {/* CreateFlowWithAI Section */}
-        <div className="flex flex-col gap-2">
-          <h2 className="text-xl font-semibold">{t('Create Flow With AI')}</h2>
-          <CreateFlowWithAI />
+    <div className="flex flex-col gap-4 w-full grow">
+      {/* Standard page header */}
+      <DashboardPageHeader
+        title={t('Quick Start')}
+        description={t('Quickly create flows with AI or ready-made templates')}
+      ></DashboardPageHeader>
+
+      {/* Create with AI prompt input */}
+      <div className="flex flex-col gap-2">
+        <CreateFlowWithAI />
+      </div>
+
+      {/* Templates Section */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg">
+            {t('Start quick with community templates')}
+          </h2>
+          <SelectFlowTemplateDialog>
+            <Button variant="outline-primary" className="gap-2">
+              {t('Browse all templates')}
+            </Button>
+          </SelectFlowTemplateDialog>
         </div>
 
-        {/* Templates Section */}
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg">
-              {t('Start quick with community templates')}
-            </h2>
-            <SelectFlowTemplateDialog>
-              <Button variant="outline-primary" className="gap-2">
-                {t('Browse all templates')}
-              </Button>
-            </SelectFlowTemplateDialog>
+        {isLoading ? (
+          <div className="flex justify-center items-center min-h-[200px]">
+            <LoadingSpinner />
           </div>
-
-          {isLoading ? (
-            <div className="flex justify-center items-center min-h-[200px]">
-              <LoadingSpinner />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {templates?.map((template) => (
+                <TemplateCard
+                  key={template.id}
+                  template={template}
+                  onSelectTemplate={handleSelectTemplate}
+                />
+              ))}
             </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {templates?.map((template) => (
-                  <TemplateCard
-                    key={template.id}
-                    template={template}
-                    onSelectTemplate={handleSelectTemplate}
-                  />
-                ))}
-              </div>
 
-              {templates?.length === 0 && (
-                <div className="mt-4 flex flex-col items-center justify-center gap-2 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    {t('No templates found')}
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+            {templates?.length === 0 && (
+              <div className="mt-4 flex flex-col items-center justify-center gap-2 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {t('No templates found')}
+                </p>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Template Detail Modal */}
@@ -234,7 +238,7 @@ const QuickStartPage = () => {
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 };
 
