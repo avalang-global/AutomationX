@@ -28,6 +28,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { flowsApi } from '@/features/flows/lib/flows-api';
+import { SelectFlowTemplateDialog } from '@/features/flows/components/select-flow-template-dialog';
 import { PieceIconList } from '@/features/pieces/components/piece-icon-list';
 import { templatesApi } from '@/features/templates/lib/templates-api';
 import { authenticationSession } from '@/lib/authentication-session';
@@ -107,16 +108,26 @@ const TemplateCard = ({ template, onSelectTemplate }: TemplateCardProps) => {
 };
 
 const QuickStartPage = () => {
-  const navigate = useNavigate();
   const [selectedTemplate, setSelectedTemplate] = useState<FlowTemplate | null>(
-    null,
+    null
   );
 
   const { data: templates, isLoading } = useQuery<FlowTemplate[], Error>({
     queryKey: ['community-templates'],
     queryFn: async () => {
-      const communityTemplates = await templatesApi.listCommunity();
-      return communityTemplates.data.slice(0, 15);
+      // const communityTemplates = await templatesApi.listCommunity();
+      // return communityTemplates.data.slice(0, 15);
+      const results = await Promise.allSettled([
+        templatesApi.listCommunity(),
+        templatesApi.listCloud(),
+      ]);
+
+      const communityTemplates =
+        results[0].status === 'fulfilled' ? results[0].value.data : [];
+      const cloudTemplates =
+        results[1].status === 'fulfilled' ? results[1].value.data : [];
+
+      return [...cloudTemplates, ...communityTemplates].slice(0, 12);
     },
     staleTime: 0,
   });
@@ -144,13 +155,11 @@ const QuickStartPage = () => {
             <h2 className="text-lg">
               {t('Start quick with community templates')}
             </h2>
-            <Button
-              variant="outline-primary"
-              className="gap-2"
-              onClick={() => navigate('/flows')}
-            >
-              {t('Your flows')}
-            </Button>
+            <SelectFlowTemplateDialog>
+              <Button variant="outline-primary" className="gap-2">
+                {t('Browse all templates')}
+              </Button>
+            </SelectFlowTemplateDialog>
           </div>
 
           {isLoading ? (
@@ -158,15 +167,25 @@ const QuickStartPage = () => {
               <LoadingSpinner />
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {templates?.map((template) => (
-                <TemplateCard
-                  key={template.id}
-                  template={template}
-                  onSelectTemplate={handleSelectTemplate}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {templates?.map((template) => (
+                  <TemplateCard
+                    key={template.id}
+                    template={template}
+                    onSelectTemplate={handleSelectTemplate}
+                  />
+                ))}
+              </div>
+
+              {templates?.length === 0 && (
+                <div className="mt-4 flex flex-col items-center justify-center gap-2 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    {t('No templates found')}
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
