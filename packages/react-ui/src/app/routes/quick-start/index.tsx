@@ -27,8 +27,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { flowsApi } from '@/features/flows/lib/flows-api';
 import { SelectFlowTemplateDialog } from '@/features/flows/components/select-flow-template-dialog';
+import { flowsApi } from '@/features/flows/lib/flows-api';
 import { PieceIconList } from '@/features/pieces/components/piece-icon-list';
 import { templatesApi } from '@/features/templates/lib/templates-api';
 import { authenticationSession } from '@/lib/authentication-session';
@@ -109,7 +109,7 @@ const TemplateCard = ({ template, onSelectTemplate }: TemplateCardProps) => {
 
 const QuickStartPage = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<FlowTemplate | null>(
-    null
+    null,
   );
 
   const { data: templates, isLoading } = useQuery<FlowTemplate[], Error>({
