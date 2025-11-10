@@ -22,14 +22,14 @@ export const promptFlowApi = {
     return api.get<BuilderMessage[]>(`/v1/builder/flow/${flowId}`);
   },
   async getCreditUsage(
-    BOTX_API_URL: string,
+    API_URL: string,
     projectId: string,
     flowId: string,
   ): Promise<number> {
     const response = await api.get<{
       project_credits: number;
       project_id: string;
-    }>(`${BOTX_API_URL}/v1/project-credits/${projectId}/${flowId}`, undefined, {
+    }>(`${API_URL}/botx/v1/project-credits/${projectId}/${flowId}`, undefined, {
       headers: {
         Authorization: `Bearer ${authenticationSession.getBotxToken()}`,
       },

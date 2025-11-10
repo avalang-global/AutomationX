@@ -104,6 +104,7 @@ export const PromptToFlowSidebar = ({
       setMessages(mapped);
       handleUpdateLocationState(mapped);
       setIsShowWelcomeMessage(mapped.length === 0);
+      reloadCreditUsage();
     } catch (e) {
       console.error('Failed to load conversation history', e);
     }
@@ -133,7 +134,6 @@ export const PromptToFlowSidebar = ({
       // Ignore direct response string; reload full conversation instead
       try {
         await reloadMessages();
-        reloadCreditUsage();
         scrollToLastMessage();
         const freshFlow = await flowsApi.get(flow.id);
         setFlow(freshFlow);
