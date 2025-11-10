@@ -27,7 +27,7 @@ import { flowRunsApi } from '@/features/flow-runs/lib/flow-runs-api';
 import { piecesHooks } from '@/features/pieces/lib/pieces-hooks';
 import { flagsHooks } from '@/hooks/flags-hooks';
 import { platformHooks } from '@/hooks/platform-hooks';
-import { PromptMessage } from '@/features/flows/lib/prompt-to-flow-api';
+import { promptFlowApi, PromptMessage } from '@/features/flows/lib/prompt-to-flow-api';
 import {
   FlowActionType,
   ApEdition,
@@ -99,7 +99,7 @@ const BuilderPage = () => {
   const location = useLocation();
   const { platform } = platformHooks.useCurrentPlatform();
   const [creditUsage, setCreditUsage] = useState(0);
-  const [setRun, flowVersion, leftSidebar, rightSidebar, run, selectedStep, setLeftSidebar] =
+  const [setRun, flowVersion, leftSidebar, rightSidebar, run, selectedStep, setLeftSidebar, flow] =
     useBuilderStateContext((state) => [
       state.setRun,
       state.flowVersion,
@@ -108,10 +108,27 @@ const BuilderPage = () => {
       state.run,
       state.selectedStep,
       state.setLeftSidebar,
+      state.flow,
     ]);
 
   const { data: edition } = flagsHooks.useFlag<ApEdition>(ApFlagId.EDITION);
   useShowBuilderIsSavingWarningBeforeLeaving();
+
+  const { data: ZERO_API_URL } = flagsHooks.useFlag<string>(ApFlagId.ZERO_SERVICE_URL);
+  const reloadCreditUsage = () => {
+    if (!ZERO_API_URL || !flow?.id) {
+      return;
+    }
+    promptFlowApi.getCreditUsage(
+      ZERO_API_URL,
+      flow.projectId,
+      flow.id
+    ).then((creditUsage) => {
+      setCreditUsage(creditUsage);
+    }).catch((error) => {
+      console.error('Failed to reload credit usage', error);
+    });
+  };
 
   const { memorizedSelectedStep, containerKey } = useBuilderStateContext(
     (state) => {
@@ -218,7 +235,7 @@ const BuilderPage = () => {
             {leftSidebar === LeftSideBarType.VERSIONS && <FlowVersionsList />}
             {leftSidebar === LeftSideBarType.AI_COPILOT && <CopilotSidebar />}
             {leftSidebar === LeftSideBarType.PROMPT_TO_FLOW && (
-              <PromptToFlowSidebar onCreditUsageChange={setCreditUsage} />
+              <PromptToFlowSidebar onShouldReloadCreditUsage={reloadCreditUsage} />
             )}
           </div>
         </ResizablePanel>
