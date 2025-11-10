@@ -130,6 +130,10 @@ const BuilderPage = () => {
     });
   };
 
+  useEffect(() => {
+    reloadCreditUsage();
+  }, [ZERO_API_URL, flow?.id]);
+
   const { memorizedSelectedStep, containerKey } = useBuilderStateContext(
     (state) => {
       const flowVersion = state.flowVersion;
