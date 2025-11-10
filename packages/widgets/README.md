@@ -16,6 +16,11 @@ One of the key features is the `createChat` function, which renders a fully-feat
 
 ### Prerequisites
 
+The AutomationX flow must have the "webhook" trigger and the webhook's return response as the last step.
+
+- Trigger input will be a JSON with a body format `{ message: <text> }`
+- Flow should return "raw" response with just the text content
+
 This library requires the following peer dependencies:
 
 - react (>= 18)
@@ -25,18 +30,25 @@ This library requires the following peer dependencies:
 
 To use the createChat function with React, follow this example:
 
+Consider mounting this component higher on DOM so it does not conflict with other deeper nested components
+
 ```
 import { createChat } from '@avalant/automationx-widgets';
 import { useEffect } from 'react';
 
 useEffect(() => {
-  createChat({ title: 'AutomationX Chat Demo' });
+  createChat({
+    title: 'Support Chat',
+    webhookUrl: 'http://127.0.0.1:4200/api/v1/webhooks/2AeEyRaC5FyEp1WvBuaVK/sync',
+  });
 }, []);
 ```
 
 ### Using with UMD Module (HTML)
 
 To use the UMD build directly in an HTML page, include the following script tags:
+
+Notice the additional `css` link tag which is required
 
 ```
 <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
@@ -48,9 +60,45 @@ To use the UMD build directly in an HTML page, include the following script tags
   widgets.createChat({
     title: 'AutomationX Chat',
     welcomeMessage: 'Hi there 👋',
+    webhookUrl: 'http://127.0.0.1:4200/api/v1/webhooks/2AeEyRaC5FyEp1WvBuaVK/sync',
   });
 </script>
 ```
+
+## Customization
+
+### Input Parameters
+
+You can customize the chat component by modifying the available input parameters as shown below
+
+Ones with "?" can be left empty as they will fallback to default values
+
+```
+{
+  parent?: HTMLElement; // Element to attach the chat window as a child
+  webhookUrl: string; // Published flow's live URL (Notice the /sync suffix)
+  title?: string; // Shown on the chat header (expanded and collapsed)
+  welcomeMessage?: string;
+  theme?: {
+    headerColor?: string; // #333
+    headerTextColor?: string; // #fff
+    backgroundColor?: string; // #fff
+    userMessageColor?: string; // #ccc
+    userMessageTextColor?: string; // #333
+    botMessageColor?: string; // #333
+    botMessageTextColor?: string; // #fff
+    buttonColor?: string; // #333
+    buttonTextColor?: string; // #fff
+    inputBorderColor?: string; // #ccc
+  };
+}
+```
+
+### Look & Feel
+
+![Collapsed Chat Window](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/default-collapsed.png)
+
+![Expanded Chat Window](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/default-expanded.png)
 
 ## Building
 
