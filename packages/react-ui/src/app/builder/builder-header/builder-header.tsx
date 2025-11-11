@@ -175,7 +175,7 @@ export const BuilderHeader = ({ creditUsage }: { creditUsage?: number }) => {
         <div className="grow"></div>
         <div className="flex items-center justify-center gap-4">
           {!!creditUsage && (
-            <div className="px-1 text-sm text-muted-foreground">
+            <div className="px-1 text-sm text-muted-foreground text-nowrap">
               Credits Used: {creditUsage.toFixed(2)}
             </div>
           )}
