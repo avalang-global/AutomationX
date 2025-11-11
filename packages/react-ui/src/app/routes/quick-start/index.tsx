@@ -157,9 +157,9 @@ const QuickStartPage = () => {
       {/* Templates Section */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg">
+          <div className="text-lg">
             {t('Start quick with community templates')}
-          </h2>
+          </div>
           <SelectFlowTemplateDialog>
             <Button variant="outline-primary" className="gap-2">
               {t('Browse all templates')}
