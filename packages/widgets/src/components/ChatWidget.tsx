@@ -32,13 +32,18 @@ export interface ChatWidgetProps {
   title?: string;
   welcomeMessage?: string;
   theme?: ThemeOptions;
+  icon?: string | React.ReactNode;
 }
+
+const DEFAULT_WELCOME_MSG = '👋 Hi there! How can I help you today?';
+const DEFAULT_TITLE = 'Chat';
 
 export const ChatWidget: React.FC<ChatWidgetProps> = ({
   webhookUrl,
-  title = 'Chat',
-  welcomeMessage = '👋 Hi there! How can I help you today?',
+  title,
+  welcomeMessage = DEFAULT_WELCOME_MSG,
   theme: userTheme = {},
+  icon,
 }) => {
   const [messages, setMessages] = useState([
     { from: 'bot', text: welcomeMessage },
@@ -86,7 +91,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   };
 
   // Fill in missing theme options with default ones
-  const theme = { ...userTheme, ...defaultTheme };
+  const theme = { ...defaultTheme, ...userTheme };
 
   const headerStyle = {
     backgroundColor: theme.headerColor,
@@ -126,7 +131,24 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
         style={headerStyle}
         onClick={() => setIsMinimized(!isMinimized)}
       >
-        <span className="ax-chat-title">{title}</span>
+        {icon &&
+          (typeof icon === 'string' ? (
+            <img
+              src={icon}
+              alt="Chat icon"
+              className="ax-chat-icon"
+              style={{ width: 24, height: 24 }}
+            />
+          ) : (
+            <span className="ax-chat-icon">{icon}</span>
+          ))}
+        {title
+          ? title
+          : icon
+          ? null
+          : DEFAULT_TITLE && (
+              <span className="ax-chat-title">{title ?? DEFAULT_TITLE}</span>
+            )}
         {!isMinimized && <span className="ax-minimize-indicator">x</span>}
       </div>
 

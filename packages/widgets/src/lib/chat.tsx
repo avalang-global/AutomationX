@@ -7,13 +7,7 @@ export interface ChatOptions extends ChatWidgetProps {
 }
 
 export function createChat(options: ChatOptions) {
-  const {
-    parent = document.body,
-    title,
-    welcomeMessage,
-    webhookUrl,
-    theme,
-  } = options;
+  const { parent = document.body, ...rest } = options;
 
   // Check if the container already exists
   let container = parent.querySelector('.automationx-chat-container');
@@ -29,14 +23,7 @@ export function createChat(options: ChatOptions) {
   }
 
   const root = ReactDOM.createRoot(container);
-  root.render(
-    <ChatWidget
-      webhookUrl={webhookUrl}
-      title={title}
-      welcomeMessage={welcomeMessage}
-      theme={theme}
-    />
-  );
+  root.render(<ChatWidget {...rest} />);
 
   return {
     destroy: () => {
