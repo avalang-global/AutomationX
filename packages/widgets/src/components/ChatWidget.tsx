@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import './ChatWindow.css';
+import './ChatWidget.css';
 
 export interface ThemeOptions {
   headerColor?: string;
@@ -14,18 +14,31 @@ export interface ThemeOptions {
   inputBorderColor?: string;
 }
 
-export interface ChatWindowProps {
+export const defaultTheme: ThemeOptions = {
+  headerColor: '#333',
+  headerTextColor: '#fff',
+  backgroundColor: '#fff',
+  userMessageColor: '#ccc',
+  userMessageTextColor: '#333',
+  botMessageColor: '#333',
+  botMessageTextColor: '#fff',
+  buttonColor: '#333',
+  buttonTextColor: '#fff',
+  inputBorderColor: '#ccc',
+};
+
+export interface ChatWidgetProps {
   webhookUrl: string;
   title?: string;
   welcomeMessage?: string;
   theme?: ThemeOptions;
 }
 
-export const ChatWindow: React.FC<ChatWindowProps> = ({
+export const ChatWidget: React.FC<ChatWidgetProps> = ({
   webhookUrl,
-  title,
-  welcomeMessage,
-  theme = {},
+  title = 'Chat',
+  welcomeMessage = '👋 Hi there! How can I help you today?',
+  theme: userTheme = {},
 }) => {
   const [messages, setMessages] = useState([
     { from: 'bot', text: welcomeMessage },
@@ -71,6 +84,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setLoading(false);
     }
   };
+
+  // Fill in missing theme options with default ones
+  const theme = { ...userTheme, ...defaultTheme };
 
   const headerStyle = {
     backgroundColor: theme.headerColor,
