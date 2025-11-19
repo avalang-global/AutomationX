@@ -14,6 +14,8 @@ One of the key features is the `createChat` function, which renders a fully-feat
 
 Sessions are persisted in local-storage to allow chat continuity
 
+Display text supports markdown
+
 ## Usage
 
 ### Prerequisites
@@ -27,6 +29,7 @@ This library requires the following peer dependencies:
 
 - react (>= 18)
 - react-dom (>= 18)
+- showdown
 
 ### Using with ES Modules (React)
 
@@ -58,6 +61,7 @@ Notice the additional `css` link tag which is required
 ```
 <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@avalant/automationx-widgets@latest/index.css" />
 <script src="https://cdn.jsdelivr.net/npm/@avalant/automationx-widgets@latest/index.umd.js"></script>
 

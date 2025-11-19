@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Converter } from 'showdown';
+
 import './ChatWidget.css';
 
 export interface ThemeOptions {
@@ -64,6 +66,14 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
 
   const sessionIdRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const converter = new Converter({
+    tables: true,
+    simpleLineBreaks: true,
+    simplifiedAutoLink: true,
+    openLinksInNewWindow: true,
+    omitExtraWLInCodeBlocks: true,
+  });
 
   useEffect(() => {
     sessionIdRef.current = getOrCreateSessionId();
@@ -181,7 +191,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
                 }`}
                 style={msg.from === 'user' ? userMessageStyle : botMessageStyle}
               >
-                {msg.text}
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: converter.makeHtml(msg.text),
+                  }}
+                ></div>
               </div>
             ))}
             {loading && <div className="ax-message ax-bot">...</div>}

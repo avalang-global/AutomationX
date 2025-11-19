@@ -20,7 +20,8 @@
   "dependencies": {},
   "peerDependencies": {
     "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react-dom": "^18.0.0",
+    "showdown": "^2.1.0"
   },
   "unpkg": "index.umd.js",
   "jsdelivr": "index.umd.js",
