@@ -12,13 +12,15 @@ One of the key features is the `createChat` function, which renders a fully-feat
 - If using the ES Modules build, it is available as a named export.
   This function requires a webhook URL configuration for your workflow and allows customization through various theme options.
 
+Sessions are persisted in local-storage to allow chat continuity
+
 ## Usage
 
 ### Prerequisites
 
 The AutomationX flow must have the "webhook" trigger and the webhook's return response as the last step.
 
-- Trigger input will be a JSON with a body format `{ message: <text> }`
+- Trigger input will be a JSON POST with a body format `{ message: <text>, sessionId: <UUID> }`
 - Flow should return "raw" response with just the text content
 
 This library requires the following peer dependencies:
@@ -101,15 +103,19 @@ Ones with "?" can be left empty as they will fallback to default values
 ### Look & Feel
 
 When collapsed (Default)
+
 ![Collapsed Chat Widget](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/default-collapsed.png)
 
 When expanded (Default)
+
 ![Expanded Chat Widget](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/default-expanded.png)
 
 With theme, icon and title; Collapsed (Customized)
+
 ![Collapsed Customized Widget](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/icon-title-collapsed.png)
 
 With theme, icon and title; Expanded (Customized)
+
 ![Expanded Customized Widget](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/icon-title-expanded.png)
 
 ## Building
