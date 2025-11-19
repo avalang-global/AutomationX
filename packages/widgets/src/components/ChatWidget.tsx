@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Converter } from 'showdown';
+import showdown from 'showdown';
 
 import './ChatWidget.css';
 
@@ -67,7 +67,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const sessionIdRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const converter = new Converter({
+  const converter = new showdown.Converter({
     tables: true,
     simpleLineBreaks: true,
     simplifiedAutoLink: true,
