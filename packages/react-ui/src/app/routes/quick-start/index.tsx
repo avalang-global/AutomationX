@@ -11,7 +11,7 @@ import { Info } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { CreateFlowWithAI } from './prompt-to-flow';
+import { CreateFlowWithAI } from '../../components/prompt-to-flow';
 
 import { DashboardPageHeader } from '@/app/components/dashboard-page-header';
 import { ApMarkdown } from '@/components/custom/markdown';
