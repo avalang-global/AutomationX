@@ -73,6 +73,7 @@ import {
   TokenCheckerWrapper,
 } from './project-route-wrapper';
 import ProjectsPage from '../routes/platform/projects';
+import { PocConnectionsPage } from '../routes/poc-connections';
 
 const SettingsRerouter = () => {
   const { hash } = useLocation();
@@ -96,6 +97,10 @@ const routes = [
   {
     path: '/authenticate',
     element: <AuthenticatePage />,
+  },
+  {
+    path: '/poc-connections',
+    element: <PocConnectionsPage />,
   },
   {
     path: '/explore',

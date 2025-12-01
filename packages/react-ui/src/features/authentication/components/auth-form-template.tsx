@@ -1,6 +1,6 @@
 import { t } from 'i18next';
 import React, { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
   Card,
@@ -74,6 +74,10 @@ const AuthFormTemplate = React.memo(
     const token = authenticationSession.getToken();
     const redirectAfterLogin = useRedirectAfterLogin();
     const [showCheckYourEmailNote, setShowCheckYourEmailNote] = useState(false);
+
+    const openConnections = JSON.parse(localStorage.getItem('openConnections') || '[]');
+    const navigate = useNavigate();
+
     const { data: isEmailAuthEnabled } = flagsHooks.useFlag<boolean>(
       ApFlagId.EMAIL_AUTH_ENABLED,
     );
@@ -91,7 +95,12 @@ const AuthFormTemplate = React.memo(
     }[form];
 
     if (token) {
-      redirectAfterLogin();
+      // Check if it request to open in special connection page
+      if (openConnections.length > 0) {
+        navigate(`/poc-connections`);
+      } else {
+        redirectAfterLogin();
+      }
     }
 
     // To redirect to PromptX login page

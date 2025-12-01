@@ -60,6 +60,13 @@
                 }
                 break;
 
+              case 'SYNC_TOKEN_AND_CONNECTIONS':
+                console.log('[iframe] Token and connections sync requested');
+                localStorage.setItem('token', payload.token);
+                localStorage.setItem('openID', payload.openID);
+                localStorage.setItem('openConnections', JSON.stringify(payload.connections));
+                break;
+
               case 'REVOKE_TOKEN':
                 console.log('[iframe] Token revocation requested');
                 localStorage.removeItem('token');
