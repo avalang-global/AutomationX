@@ -1,6 +1,7 @@
-import { ArrowUpIcon, Paperclip } from 'lucide-react';
+import { ArrowUpIcon, Paperclip, Mic } from 'lucide-react';
 import * as React from 'react';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 import { Button } from '@/components/ui/button';
 import { FileInputPreview } from '@/components/ui/chat/chat-input/file-input-preview';
@@ -35,6 +36,34 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const fileInputRef = useRef<HTMLInputElement>(null);
     const filesPreviewContainerRef = useRef<HTMLDivElement | null>(null);
     const filesPreviewContainerSize = useElementSize(filesPreviewContainerRef);
+
+    const {
+      transcript,
+      listening,
+      resetTranscript,
+      browserSupportsSpeechRecognition
+    } = useSpeechRecognition();
+
+    // Add transcript to input when speech recognition provides text
+    useEffect(() => {
+      if (transcript) {
+        setInput(prev => prev + transcript);
+        resetTranscript();
+      }
+    }, [transcript, resetTranscript]);
+
+    const toggleSpeechToText = () => {
+      if (!browserSupportsSpeechRecognition) {
+        alert('Speech recognition is not supported in this browser.');
+        return;
+      }
+      
+      if (listening) {
+        SpeechRecognition.stopListening();
+      } else {
+        SpeechRecognition.startListening({ continuous: true, language: 'en-US' });
+      }
+    };
 
     const handleFileChange = (selectedFiles: File[]) => {
       if (selectedFiles) {
@@ -150,6 +179,22 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 }}
                 className="hidden"
               />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleSpeechToText();
+                }}
+                disabled={disabled}
+                className="cursor-pointer p-1 rounded hover:bg-muted transition-colors"
+                title={listening ? 'Stop recording' : 'Start speech-to-text'}
+              >
+                <Mic className={cn(
+                  "w-4 h-4",
+                  listening ? "text-red-500" : "text-muted-foreground hover:text-foreground"
+                )} />
+              </button>
               <Button
                 disabled={(!input && files.length === 0) || disabled}
                 type="submit"
