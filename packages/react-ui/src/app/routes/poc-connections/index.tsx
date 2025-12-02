@@ -107,6 +107,7 @@ export const PocConnectionsPage = () => {
     );
     if (openConnections.length > 0) {
       setPieceToBeOpen(openConnections);
+      localStorage.removeItem('openConnections');
     }
   }, []);
 
