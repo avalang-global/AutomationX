@@ -34,7 +34,17 @@ export const useDefaultRedirectPath = () => {
 export const useRedirectAfterLogin = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const defaultRedirectPath = useDefaultRedirectPath();
+  let defaultRedirectPath = useDefaultRedirectPath();
+
+  const openConnections = JSON.parse(
+    localStorage.getItem('openConnections') || '[]'
+  );
+  if (openConnections.length > 0) {
+    // If it request to open in special connection page, redirect to it
+    console.log('found connections to open: ', openConnections);
+    defaultRedirectPath = '/poc-connections';
+  }
+
   const from = searchParams.get(FROM_QUERY_PARAM) ?? defaultRedirectPath;
   return () => navigate(from);
 };
