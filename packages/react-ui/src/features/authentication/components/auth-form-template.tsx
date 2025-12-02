@@ -75,7 +75,9 @@ const AuthFormTemplate = React.memo(
     const redirectAfterLogin = useRedirectAfterLogin();
     const [showCheckYourEmailNote, setShowCheckYourEmailNote] = useState(false);
 
-    const openConnections = JSON.parse(localStorage.getItem('openConnections') || '[]');
+    const openConnections = JSON.parse(
+      localStorage.getItem('openConnections') || '[]'
+    );
     const navigate = useNavigate();
 
     const { data: isEmailAuthEnabled } = flagsHooks.useFlag<boolean>(
@@ -94,14 +96,16 @@ const AuthFormTemplate = React.memo(
       },
     }[form];
 
-    if (token) {
-      // Check if it request to open in special connection page
-      if (openConnections.length > 0) {
-        navigate(`/poc-connections`);
-      } else {
-        redirectAfterLogin();
+    useEffect(() => {
+      if (token) {
+        // Check if it request to open in special connection page
+        if (openConnections.length > 0) {
+          navigate(`/poc-connections`);
+        } else {
+          redirectAfterLogin();
+        }
       }
-    }
+    }, []);
 
     // To redirect to PromptX login page
     const { data: loginUrl } = flagsHooks.useFlag<string>(ApFlagId.LOGIN_URL);
