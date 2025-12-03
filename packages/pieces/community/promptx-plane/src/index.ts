@@ -14,9 +14,10 @@ export const planeAuth = PieceAuth.SecretText({
 
 export const plane = createPiece({
   displayName: 'Plane',
+  description: 'Interact with Plane project management tool',
   auth: planeAuth,
   minimumSupportedRelease: '0.36.1',
-  logoUrl: 'https://cdn.activepieces.com/pieces/plane.png',
+  logoUrl: 'https://plane.so/brand-logos/logo-dark.svg',
   authors: ['tumrabert'],
   actions: [listAllModules, listAllItemsInModule],
   triggers: [],
