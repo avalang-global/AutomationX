@@ -212,7 +212,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
                 ></div>
               </div>
             ))}
-            {loading && <div className="ax-message ax-bot">...</div>}
+            {loading && (
+              <div className="ax-message ax-bot ax-typing-indicator">
+                <span></span><span></span><span></span>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
