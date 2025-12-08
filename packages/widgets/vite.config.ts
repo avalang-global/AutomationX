@@ -43,8 +43,10 @@ export default defineConfig(() => ({
       },
     },
     define: {
-      // Required by React
+      // Polyfills for UMD build. NODE_ENV was required by React
+      'process.env': {},
       'process.env.NODE_ENV': JSON.stringify('production'),
+      process: JSON.stringify({ env: { NODE_ENV: 'production' } }),
     },
   },
 }));
