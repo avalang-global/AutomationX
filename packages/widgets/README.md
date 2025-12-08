@@ -108,6 +108,7 @@ Ones with "?" can be left empty as they will fallback to default values
     offsetY?: number,
   };
 }
+```
 
 ### Positioning
 
@@ -136,4 +137,3 @@ With theme, icon and title; Expanded (Customized)
 ## Building
 
 Run `nx build widgets` to build the library.
-```
