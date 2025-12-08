@@ -104,6 +104,11 @@
   background: transparent;
 }
 
+.ax-chat-footer textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .ax-chat-footer input:focus {
   box-shadow: 0 0 0 3px rgba(0, 91, 181, 0.2);
 }

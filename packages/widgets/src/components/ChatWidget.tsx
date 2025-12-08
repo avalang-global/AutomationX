@@ -17,10 +17,10 @@ export interface ThemeOptions {
 }
 
 export interface PositionOptions {
-  vertical: 'bottom' | 'top',
-  horizontal: 'right' | 'left',
-  offsetX?: number,
-  offsetY?: number,
+  vertical: 'bottom' | 'top';
+  horizontal: 'right' | 'left';
+  offsetX?: number;
+  offsetY?: number;
 }
 
 export const defaultTheme: ThemeOptions = {
@@ -250,6 +250,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
               placeholder="Type a message..."
               value={input}
               style={inputStyle}
+              disabled={loading}
               onChange={(e) => {
                 setInput(e.target.value);
               }}
