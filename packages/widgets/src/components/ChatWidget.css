@@ -1,9 +1,6 @@
 .ax-chat-container {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
   width: 360px;
-  max-height: 80vh;
+  max-height: 60vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     sans-serif;
   border-radius: 16px;
