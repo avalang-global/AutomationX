@@ -4,6 +4,7 @@ import dts from 'vite-plugin-dts';
 import * as path from 'path';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -15,6 +16,11 @@ export default defineConfig(() => ({
     dts({
       entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
+    }),
+    nodePolyfills({
+      // Used by React and we need this for UMD build
+      include: ['process'],
+      globals: { global: true, process: true },
     }),
   ],
   build: {
@@ -41,12 +47,6 @@ export default defineConfig(() => ({
           showdown: 'showdown',
         },
       },
-    },
-    define: {
-      // Polyfills for UMD build. NODE_ENV was required by React
-      'process.env': {},
-      'process.env.NODE_ENV': JSON.stringify('production'),
-      process: JSON.stringify({ env: { NODE_ENV: 'production' } }),
     },
   },
 }));

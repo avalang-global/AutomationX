@@ -301,7 +301,15 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
               rows={1}
             />
             <button onClick={toggleSpeech} style={{ padding: 10 }}>
-              {listening ? microphoneSvgIcon('off') : microphoneSvgIcon('on')}
+              {listening
+                ? microphoneSvgIcon({
+                    type: 'off',
+                    strokeColor: userTheme.buttonTextColor,
+                  })
+                : microphoneSvgIcon({
+                    type: 'on',
+                    strokeColor: userTheme.buttonTextColor,
+                  })}
             </button>
             <button
               onClick={sendMessage}
