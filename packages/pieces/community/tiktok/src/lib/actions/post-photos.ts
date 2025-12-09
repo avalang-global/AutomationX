@@ -1,12 +1,11 @@
-import { createAction, Property } from '@activepieces/pieces-framework';
 import { httpClient, HttpMethod } from '@activepieces/pieces-common';
-import { tiktokAuth, baseUrl } from '../common/common';
+import { createAction, Property } from '@activepieces/pieces-framework';
+import { baseUrl, tiktokAuth } from '../common';
 
 export const postPhotos = createAction({
-  // auth: check https://www.activepieces.com/docs/developers/piece-reference/authentication,
   name: 'postPhotos',
   displayName: 'Post Photos',
-  description: 'To initiate photo upload on TikTok server you must invoke the Content Posting API endpoint.',
+  description: 'Post photos to TikTok',
   props: {
     title: Property.ShortText({
       displayName: 'Title',
@@ -15,12 +14,12 @@ export const postPhotos = createAction({
     }),
     description: Property.LongText({
       displayName: 'Description',
-      description: 'Description/caption of the post',
+      description: 'Description or caption of the post',
       required: true,
     }),
     disable_comment: Property.Checkbox({
       displayName: 'Disable Comments',
-      description: 'Disable comments on this post',
+      description: 'Should comments be disabled on this post?',
       required: false,
     }),
     privacy_level: Property.StaticDropdown({
@@ -65,11 +64,11 @@ export const postPhotos = createAction({
   },
   auth: tiktokAuth,
   async run(context) {
-    const res = await httpClient.sendRequest<any>({
+    const res = await httpClient.sendRequest({
       method: HttpMethod.POST,
       url: `${baseUrl}/post/publish/content/init/`,
       headers: {
-        'Authorization': `Bearer ${context.auth}`,
+        Authorization: `Bearer ${context.auth}`,
         'Content-Type': 'application/json',
       },
       body: {
