@@ -13,12 +13,12 @@ export const tiktok = createPiece({
   actions: [
     postPhotos,
     createCustomApiCallAction({
-      baseUrl: () => 'https://tidycal.com/api',
-      auth: tiktokAuth,
-      authMapping: async (auth) => ({
-        Authorization: `Bearer ${auth}`,
+        baseUrl: () => 'https://open.tiktokapis.com/v2',
+        auth: tiktokAuth,
+        authMapping: async (auth) => ({
+          Authorization: `Bearer ${auth}`,
+        }),
       }),
-    }),
   ],
   triggers: [],
 });
