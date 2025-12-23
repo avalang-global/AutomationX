@@ -1,24 +1,16 @@
 import { useQueries } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { ListTemplatesRequestQuery, Template } from '@activepieces/shared';
+import { ListTemplatesRequestQuery } from '@activepieces/shared';
 
 import { templatesApi } from '../lib/templates-api';
 
 export const useTemplates = (request: ListTemplatesRequestQuery) => {
   const [search, setSearch] = useState<string>('');
 
-  // Fetch community, cloud, and user templates
+  // Fetch cloud and community templates
   const queries = useQueries({
     queries: [
-      {
-        queryKey: ['templates'],
-        queryFn: async () => {
-          const result = await templatesApi.list(request);
-          return result.data;
-        },
-        staleTime: 0, // Always fetch when needed
-      },
       {
         queryKey: ['cloud-templates'],
         queryFn: async () => {
@@ -38,11 +30,7 @@ export const useTemplates = (request: ListTemplatesRequestQuery) => {
     ],
   });
 
-  const templates = [
-    ...(queries[0].data ?? []),
-    ...(queries[1].data ?? []),
-    ...(queries[2].data ?? []),
-  ];
+  const templates = [...(queries[0].data ?? []), ...(queries[1].data ?? [])];
 
   // Filter templates based on search
   const filteredTemplates = templates.filter((template) => {
