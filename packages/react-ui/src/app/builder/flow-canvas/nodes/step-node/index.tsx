@@ -2,8 +2,12 @@ import { useDraggable } from '@dnd-kit/core';
 import { Handle, NodeProps, Position } from '@xyflow/react';
 import React, { useMemo } from 'react';
 
-import { useBuilderStateContext } from '@/app/builder/builder-hooks';
+import {
+  RightSideBarType,
+  useBuilderStateContext,
+} from '@/app/builder/builder-hooks';
 import { PieceSelector } from '@/app/builder/pieces-selector';
+import { LoopIterationInput } from '@/app/builder/run-details/loop-iteration-input';
 import { stepsHooks } from '@/features/pieces/lib/steps-hooks';
 import { cn } from '@/lib/utils';
 import {
@@ -40,6 +44,7 @@ const ApStepCanvasNode = React.memo(
       isPieceSelectorOpened,
       setOpenedPieceSelectorStepNameOrAddButtonId,
       isStepValid,
+      isRightSidebarOpen,
     ] = useBuilderStateContext((state) => [
       state.selectStepByName,
       state.selectedStep === step.name,
@@ -50,6 +55,7 @@ const ApStepCanvasNode = React.memo(
       state.openedPieceSelectorStepNameOrAddButtonId === step.name,
       state.setOpenedPieceSelectorStepNameOrAddButtonId,
       flowStructureUtil.getStep(step.name, state.flowVersion.trigger)?.valid,
+      state.rightSidebar !== RightSideBarType.NONE,
     ]);
     const { stepMetadata } = stepsHooks.useStepMetadata({
       step,
@@ -71,15 +77,50 @@ const ApStepCanvasNode = React.memo(
 
     const handleStepClick = (
       e: React.MouseEvent<HTMLDivElement, MouseEvent>,
+      preventDefault = true,
     ) => {
       selectStepByName(step.name);
       setSelectedBranchIndex(null);
       if (step.type === FlowTriggerType.EMPTY) {
         setOpenedPieceSelectorStepNameOrAddButtonId(step.name);
       }
+      if (preventDefault) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+    const handleContextMenu = (
+      e: React.MouseEvent<HTMLDivElement, MouseEvent>,
+    ) => {
+      handleStepClick(e, false);
+      if (isRightSidebarOpen) {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
+      const target = e.currentTarget;
+      const rect = target.getBoundingClientRect();
+
+      // we need to delay the context menu to ensure the right sidebar is opened first
+      const relativeX = e.clientX - rect.left;
+      const relativeY = e.clientY - rect.top;
+
+      setTimeout(() => {
+        const currentRect = target.getBoundingClientRect();
+        const screenX = currentRect.left + relativeX;
+        const screenY = currentRect.top + relativeY;
+        const contextMenuEvent = new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX: screenX,
+          clientY: screenY,
+          button: 2,
+          buttons: 2,
+        });
+        target.dispatchEvent(contextMenuEvent);
+      }, flowCanvasUtils.sidebarAnimationDuration + 50);
     };
+
     const stepNodeDivAttributes = isPieceSelectorOpened ? {} : attributes;
     const stepNodeDivListeners = isPieceSelectorOpened ? {} : listeners;
     return (
@@ -90,6 +131,7 @@ const ApStepCanvasNode = React.memo(
           width: `${flowUtilConsts.AP_NODE_SIZE.STEP.width}px`,
           maxWidth: `${flowUtilConsts.AP_NODE_SIZE.STEP.width}px`,
         }}
+        onContextMenu={(e) => handleContextMenu(e)}
         className={cn(
           'transition-all border-box rounded-md border border-solid border-border relative overflow-show  group',
           {
@@ -113,6 +155,7 @@ const ApStepCanvasNode = React.memo(
           isValid={!!isStepValid}
           isSkipped={isSkipped}
         />
+        <LoopIterationInput stepName={step.name} />
         <ApStepNodeStatus stepName={step.name} />
         <StepNodeName stepName={step.name} />
         <div className="px-3 h-full w-full overflow-hidden">
@@ -144,6 +187,7 @@ const ApStepCanvasNode = React.memo(
                   stepIndex={stepIndex}
                   isSkipped={isSkipped}
                   pieceDisplayName={stepMetadata?.displayName ?? ''}
+                  stepName={step.name}
                 />
                 {!readonly && <StepNodeChevron />}
               </div>

@@ -1,7 +1,7 @@
 // import { OPEN_SOURCE_PLAN } from '@activepieces/ee-shared'
 import {
     ActivepiecesError,
-    AiOverageState,
+    AiCreditsAutoTopUpState,
     ApEdition,
     apId,
     ErrorCode,
@@ -39,8 +39,7 @@ const DEFAULT_PLAN = {
     agentsEnabled: true,
     mcpsEnabled: true,
     includedAiCredits: 0,
-    aiCreditsOverageLimit: undefined,
-    aiCreditsOverageState: AiOverageState.ALLOWED_BUT_OFF,
+    aiCreditsAutoTopUpState: AiCreditsAutoTopUpState.DISABLED,
     environmentsEnabled: false,
     agentsLimit: undefined,
     analyticsEnabled: true,

@@ -1,7 +1,7 @@
+import { securityAccess } from '@activepieces/server-shared'
 import {
     ApId,
     assertNotNullOrUndefined,
-    EndpointScope,
     ListUsersRequestBody,
     PrincipalType,
     SeekPage,
@@ -28,6 +28,13 @@ export const platformUserController: FastifyPluginAsyncTypebox = async (app) => 
             cursorRequest: req.query.cursor ?? null,
             limit: req.query.limit ?? 10,
         })
+    })
+
+    // Custom
+    app.get('/:id', GetUserRequest, async (req): Promise<UserWithMetaInformation> => {
+        const userId = req.params.id
+        const platformId = req.principal.platform.id
+        return userService.getOneByIdAndPlatformIdOrThrow({ id: userId, platformId })
     })
 
     app.post('/:id', UpdateUserRequest, async (req) => {
@@ -70,9 +77,25 @@ const ListUsersRequest = {
         [StatusCodes.OK]: SeekPage(UserWithMetaInformation),
     },
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.platformAdminOnly([PrincipalType.USER, PrincipalType.SERVICE]),
     },
+}
+
+const GetUserRequest = {
+    schema: {
+        params: Type.Object({
+            id: Type.String(),
+        }),
+        tags: ['users'],
+        description: 'Get user',
+        security: [SERVICE_KEY_SECURITY_OPENAPI],
+    },
+    response: {
+        [StatusCodes.OK]: UserWithMetaInformation,
+    },
+    config: {
+        security: securityAccess.platformAdminOnly([PrincipalType.USER, PrincipalType.SERVICE]),
+    }
 }
 
 const UpdateUserRequest = {
@@ -89,8 +112,7 @@ const UpdateUserRequest = {
         security: [SERVICE_KEY_SECURITY_OPENAPI],
     },
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.platformAdminOnly([PrincipalType.USER, PrincipalType.SERVICE]),
     },
 }
 
@@ -101,7 +123,6 @@ const DeleteUserRequest = {
         }),
     },
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.platformAdminOnly([PrincipalType.USER, PrincipalType.SERVICE]),
     },
 }

@@ -1,4 +1,5 @@
 // import { ApplicationEventName, GetFlowTemplateRequestQuery, GitPushOperationType } from '@activepieces/ee-shared'
+import { ProjectResourceType, securityAccess } from '@activepieces/server-shared'
 import {
     ActivepiecesError,
     ApId,
@@ -32,9 +33,10 @@ import { entitiesMustBeOwnedByCurrentProject } from '../../authentication/author
 // import { assertUserHasPermissionToFlow } from '../../ee/authentication/project-role/rbac-middleware'
 // import { platformPlanService } from '../../ee/platform/platform-plan/platform-plan.service'
 // import { gitRepoService } from '../../ee/projects/project-release/git-sync/git-sync.service'
-import { eventsHooks } from '../../helper/application-events'
+// import { applicationEvents } from '../../helper/application-events'
 import { platformPlanService } from '../../platform-plan/platform-plan.service'
 import { migrateFlowVersionTemplate } from '../flow-version/migrations'
+import { FlowEntity } from './flow.entity'
 import { flowService } from './flow.service'
 
 const DEFAULT_PAGE_SIZE = 10
@@ -43,11 +45,12 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
     app.addHook('preSerialization', entitiesMustBeOwnedByCurrentProject)
     app.post('/', CreateFlowRequestOptions, async (request, reply) => {
         const newFlow = await flowService(request.log).create({
-            projectId: request.principal.projectId,
+            projectId: request.projectId,
             request: request.body,
+            ownerId: request.principal.type === PrincipalType.SERVICE ? undefined : request.principal.id,
         })
 
-        // eventsHooks.get(request.log).sendUserEventFromRequest(request, {
+        // applicationEvents.sendUserEvent(request, {
         //     action: ApplicationEventName.FLOW_CREATED,
         //     data: {
         //         flow: newFlow,
@@ -59,8 +62,12 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
 
     app.post('/:id', {
         config: {
-            allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-            permission: Permission.UPDATE_FLOW_STATUS,
+            security: securityAccess.project(
+                [PrincipalType.USER, PrincipalType.SERVICE],
+                Permission.UPDATE_FLOW_STATUS, {
+                    type: ProjectResourceType.TABLE,
+                    tableName: FlowEntity,
+                }),
         },
         schema: {
             tags: ['flows'],
@@ -83,11 +90,11 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
         },
     }, async (request) => {
         const userId = await authenticationUtils.extractUserIdFromPrincipal(request.principal)
-        // await assertUserHasPermissionToFlow(request.principal, request.body.type, request.log)
+        // await assertUserHasPermissionToFlow(request.principal, request.projectId, request.body.type, request.log)
 
         const flow = await flowService(request.log).getOnePopulatedOrThrow({
             id: request.params.id,
-            projectId: request.principal.projectId,
+            projectId: request.projectId,
         })
 
         const turnOnFlow = request.body.type === FlowOperationType.CHANGE_STATUS && request.body.request.status === FlowStatus.ENABLED
@@ -98,7 +105,7 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
             //     request.principal.platform.id,
             //     PlatformUsageMetric.ACTIVE_FLOWS,
             // )
-            const exceededLimit = await platformPlanService(request.log).flowsExceeded(request.principal.projectId)
+            const exceededLimit = await platformPlanService(request.log).flowsExceeded(request.projectId)
             if (exceededLimit) {
                 throw new ActivepiecesError({
                     code: ErrorCode.QUOTA_EXCEEDED,
@@ -113,10 +120,10 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
             id: request.params.id,
             userId: request.principal.type === PrincipalType.SERVICE ? null : userId,
             platformId: request.principal.platform.id,
-            projectId: request.principal.projectId,
+            projectId: request.projectId,
             operation: cleanOperation(request.body),
         })
-        // eventsHooks.get(request.log).sendUserEventFromRequest(request, {
+        // applicationEvents.sendUserEvent(request, {
         //     action: ApplicationEventName.FLOW_UPDATED,
         //     data: {
         //         request: request.body,
@@ -128,7 +135,7 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
 
     app.get('/', ListFlowsRequestOptions, async (request) => {
         return flowService(request.log).list({
-            projectIds: [request.principal.projectId],
+            projectIds: [request.projectId],
             folderId: request.query.folderId,
             cursorRequest: request.query.cursor ?? null,
             limit: request.query.limit ?? DEFAULT_PAGE_SIZE,
@@ -144,14 +151,14 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
     app.get('/count', CountFlowsRequestOptions, async (request) => {
         return flowService(request.log).count({
             folderId: request.query.folderId,
-            projectId: request.principal.projectId,
+            projectId: request.projectId,
         })
     })
 
     app.get('/:id/template', GetFlowTemplateRequestOptions, async (request) => {
         return flowService(request.log).getTemplate({
             flowId: request.params.id,
-            projectId: request.principal.projectId,
+            projectId: request.projectId,
             versionId: undefined,
         })
     })
@@ -159,7 +166,7 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
     app.get('/:id', GetFlowRequestOptions, async (request) => {
         return flowService(request.log).getOnePopulatedOrThrow({
             id: request.params.id,
-            projectId: request.principal.projectId,
+            projectId: request.projectId,
             versionId: request.query.versionId,
         })
     })
@@ -167,21 +174,21 @@ export const flowController: FastifyPluginAsyncTypebox = async (app) => {
     app.delete('/:id', DeleteFlowRequestOptions, async (request, reply) => {
         const flow = await flowService(request.log).getOnePopulatedOrThrow({
             id: request.params.id,
-            projectId: request.principal.projectId,
+            projectId: request.projectId,
         })
         // await gitRepoService(request.log).onDeleted({
         //     type: GitPushOperationType.DELETE_FLOW,
         //     externalId: flow.externalId,
         //     userId: request.principal.id,
-        //     projectId: request.principal.projectId,
+        //     projectId: request.projectId,
         //     platformId: request.principal.platform.id,
         //     log: request.log,
         // })
         await flowService(request.log).delete({
             id: request.params.id,
-            projectId: request.principal.projectId,
+            projectId: request.projectId,
         })
-        // eventsHooks.get(request.log).sendUserEventFromRequest(request, {
+        // applicationEvents.sendUserEvent(request, {
         //     action: ApplicationEventName.FLOW_DELETED,
         //     data: {
         //         flow,
@@ -254,8 +261,11 @@ async function assertThatFlowIsNotBeingUsed(
 
 const CreateFlowRequestOptions = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        permission: Permission.WRITE_FLOW,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.WRITE_FLOW, {
+                type: ProjectResourceType.BODY,
+            }),
     },
     schema: {
         tags: ['flows'],
@@ -271,8 +281,11 @@ const CreateFlowRequestOptions = {
 
 const ListFlowsRequestOptions = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        permission: Permission.READ_FLOW,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.READ_FLOW, {
+                type: ProjectResourceType.QUERY,
+            }),
     },
     schema: {
         tags: ['flows'],
@@ -287,8 +300,11 @@ const ListFlowsRequestOptions = {
 
 const CountFlowsRequestOptions = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        permission: Permission.READ_FLOW,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.READ_FLOW, {
+                type: ProjectResourceType.QUERY,
+            }),
     },
     schema: {
         querystring: CountFlowsRequest,
@@ -297,8 +313,12 @@ const CountFlowsRequestOptions = {
 
 const GetFlowTemplateRequestOptions = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        permission: Permission.READ_FLOW,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.READ_FLOW, {
+                type: ProjectResourceType.TABLE,
+                tableName: FlowEntity,
+            }),
     },
     schema: {
         tags: ['flows'],
@@ -316,8 +336,12 @@ const GetFlowTemplateRequestOptions = {
 
 const GetFlowRequestOptions = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        permission: Permission.READ_FLOW,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.READ_FLOW, {
+                type: ProjectResourceType.TABLE,
+                tableName: FlowEntity,
+            }),
     },
     schema: {
         tags: ['flows'],
@@ -335,8 +359,12 @@ const GetFlowRequestOptions = {
 
 const DeleteFlowRequestOptions = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        permission: Permission.WRITE_FLOW,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.WRITE_FLOW, {
+                type: ProjectResourceType.TABLE,
+                tableName: FlowEntity,
+            }),
     },
     schema: {
         tags: ['flows'],

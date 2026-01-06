@@ -1,4 +1,5 @@
-import { AnalyticsResponse, EndpointScope, GetAnalyticsParams, OverviewResponse, PrincipalType } from '@activepieces/shared'
+import { securityAccess } from '@activepieces/server-shared'
+import { AnalyticsResponse, GetAnalyticsParams, OverviewResponse, PrincipalType } from '@activepieces/shared'
 import { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
 import { StatusCodes } from 'http-status-codes'
 import { analyticsService } from './analytics-service'
@@ -12,8 +13,7 @@ const ErrorResponse = {
 
 const AnalyticsRequest = {
     config: {
-        allowedPrincipals: [PrincipalType.USER] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.platformAdminOnly([PrincipalType.USER]),
     },
     schema: {
         tags: ['analytics'],
@@ -29,8 +29,7 @@ const AnalyticsRequest = {
 
 const OverviewRequest = {
     config: {
-        allowedPrincipals: [PrincipalType.USER] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.platformAdminOnly([PrincipalType.USER]),
     },
     schema: {
         tags: ['analytics'],

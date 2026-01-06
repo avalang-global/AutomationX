@@ -93,6 +93,30 @@ export const flagService = {
                 updated,
             },
             {
+                id: ApFlagId.CAN_BUY_ACTIVE_FLOWS,
+                value: system.getEdition() === ApEdition.CLOUD,
+                created,
+                updated,
+            },
+            {
+                id: ApFlagId.CAN_BUY_AI_CREDITS,
+                value: !isNil(system.get(AppSystemProp.OPENROUTER_PROVISION_KEY)),
+                created,
+                updated,
+            },
+            {
+                id: ApFlagId.SHOW_BILLING_LIMITS_ON_SIDEBAR,
+                value: system.getEdition() === ApEdition.CLOUD,
+                created,
+                updated,
+            },
+            {
+                id: ApFlagId.SHOW_BILLING_PAGE,
+                value: system.getEdition() === ApEdition.CLOUD,
+                created,
+                updated,
+            },
+            {
                 id: ApFlagId.SHOW_POWERED_BY_IN_FORM,
                 value: false,
                 created,
@@ -125,13 +149,6 @@ export const flagService = {
             {
                 id: ApFlagId.EDITION,
                 value: system.getEdition(),
-                created,
-                updated,
-            },
-
-            {
-                id: ApFlagId.SHOW_BILLING,
-                value: system.getEdition() === ApEdition.CLOUD,
                 created,
                 updated,
             },
@@ -310,6 +327,10 @@ export const flagService = {
         }
 
         return platformId === cloudPlatformId
+    },
+
+    aiCreditsEnabled(): boolean {
+        return !isNil(system.get(AppSystemProp.OPENROUTER_PROVISION_KEY))
     },
 }
 

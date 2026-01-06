@@ -4,11 +4,9 @@ import { ImperativePanelHandle } from 'react-resizable-panels';
 import { useLocation } from 'react-router-dom';
 
 import {
-  LeftSideBarType,
   RightSideBarType,
   useBuilderStateContext,
   useShowBuilderIsSavingWarningBeforeLeaving,
-  useSwitchToDraft,
 } from '@/app/builder/builder-hooks';
 import { DataSelector } from '@/app/builder/data-selector';
 import { CanvasControls } from '@/app/builder/flow-canvas/canvas-controls';
@@ -21,7 +19,6 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable-panel';
-import { RunDetailsBar } from '@/features/flow-runs/components/run-details-bar';
 import { flowRunsApi } from '@/features/flow-runs/lib/flow-runs-api';
 import { piecesHooks } from '@/features/pieces/lib/pieces-hooks';
 import { platformHooks } from '@/hooks/platform-hooks';
@@ -49,24 +46,23 @@ import {
 
 import { BuilderHeader } from './builder-header/builder-header';
 import { FlowCanvas } from './flow-canvas';
-import { LEFT_SIDEBAR_ID } from './flow-canvas/utils/consts';
+import { flowCanvasUtils } from './flow-canvas/utils/flow-canvas-utils';
+import PublishFlowReminderWidget from './flow-canvas/widgets/publish-flow-reminder-widget';
+import { RunInfoWidget } from './flow-canvas/widgets/run-info-widget';
+import { ViewingOldVersionWidget } from './flow-canvas/widgets/viewing-old-version-widget';
 import { FlowVersionsList } from './flow-versions';
-import { FlowRunDetails } from './run-details';
 import { RunsList } from './run-list';
 import { StepSettingsContainer } from './step-settings';
 import { PromptToFlowSidebar } from './prompt-to-flow';
 import { flagsHooks } from '@/hooks/flags-hooks';
 
+import { ResizableVerticalPanelsProvider } from './step-settings/resizable-vertical-panels-context';
 const minWidthOfSidebar = 'min-w-[max(20vw,400px)]';
-const animateResizeClassName = `transition-all duration-200`;
+const animateResizeClassName = `transition-all `;
 
-const useAnimateSidebar = (
-  sidebarValue: LeftSideBarType | RightSideBarType,
-) => {
+const useAnimateSidebar = (sidebarValue: RightSideBarType) => {
   const handleRef = useRef<ImperativePanelHandle>(null);
-  const sidebarClosed = [LeftSideBarType.NONE, RightSideBarType.NONE].includes(
-    sidebarValue,
-  );
+  const sidebarClosed = sidebarValue === RightSideBarType.NONE;
   useEffect(() => {
     const sidebarSize = handleRef.current?.getSize() ?? 0;
     if (sidebarClosed) {
@@ -82,25 +78,15 @@ const BuilderPage = () => {
   const location = useLocation();
   const { platform } = platformHooks.useCurrentPlatform();
   const [creditUsage, setCreditUsage] = useState(0);
-  const [
-    setRun,
-    flowVersion,
-    leftSidebar,
-    rightSidebar,
-    run,
-    selectedStep,
-    setLeftSidebar,
-    flow,
-  ] = useBuilderStateContext((state) => [
-    state.setRun,
-    state.flowVersion,
-    state.leftSidebar,
-    state.rightSidebar,
-    state.run,
-    state.selectedStep,
-    state.setLeftSidebar,
-    state.flow,
-  ]);
+  const [flow, setRun, flowVersion, rightSidebar, run, selectedStep] =
+    useBuilderStateContext((state) => [
+      state.flow,
+      state.setRun,
+      state.flowVersion,
+      state.rightSidebar,
+      state.run,
+      state.selectedStep,
+    ]);
 
   useShowBuilderIsSavingWarningBeforeLeaving();
 
@@ -145,12 +131,11 @@ const BuilderPage = () => {
   const middlePanelSize = useElementSize(middlePanelRef);
   const [isDraggingHandle, setIsDraggingHandle] = useState(false);
   const rightHandleRef = useAnimateSidebar(rightSidebar);
-  const leftHandleRef = useAnimateSidebar(leftSidebar);
   const rightSidePanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (location.search.includes(NEW_FLOW_WITH_AI_QUERY_PARAM)) {
-      setLeftSidebar(LeftSideBarType.PROMPT_TO_FLOW);
+      setLeftSidebar(RightSideBarType.PROMPT_TO_FLOW);
     }
   }, [location.search]);
 
@@ -187,7 +172,6 @@ const BuilderPage = () => {
     };
   }, [socket.id, run?.id]);
 
-  const { switchToDraft, isSwitchingToDraftPending } = useSwitchToDraft();
   const [hasCanvasBeenInitialised, setHasCanvasBeenInitialised] =
     useState(false);
 
@@ -197,53 +181,14 @@ const BuilderPage = () => {
         <BuilderHeader creditUsage={creditUsage} />
       </div>
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel
-          id="left-sidebar"
-          defaultSize={0}
-          minSize={0}
-          maxSize={39}
-          order={1}
-          ref={leftHandleRef}
-          className={cn('min-w-0 z-20 ', {
-            [minWidthOfSidebar]: leftSidebar !== LeftSideBarType.NONE,
-            [animateResizeClassName]: !isDraggingHandle,
-          })}
-        >
-          <div id={LEFT_SIDEBAR_ID} className="w-full h-full">
-            {leftSidebar === LeftSideBarType.RUNS && <RunsList />}
-            {leftSidebar === LeftSideBarType.RUN_DETAILS && <FlowRunDetails />}
-            {leftSidebar === LeftSideBarType.PROMPT_TO_FLOW && (
-              <PromptToFlowSidebar
-                onShouldReloadCreditUsage={reloadCreditUsage}
-              />
-            )}
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle
-          onDragging={setIsDraggingHandle}
-          withHandle={leftSidebar !== LeftSideBarType.NONE}
-          className={
-            leftSidebar === LeftSideBarType.NONE ? 'bg-transparent' : ''
-          }
-        />
-
         <ResizablePanel defaultSize={100} order={2} id="flow-canvas">
           <div ref={middlePanelRef} className="relative h-full w-full">
             <FlowCanvas
               setHasCanvasBeenInitialised={setHasCanvasBeenInitialised}
             ></FlowCanvas>
-
-            <RunDetailsBar
-              run={run}
-              isLoading={isSwitchingToDraftPending}
-              exitRun={() => {
-                socket.removeAllListeners(
-                  WebsocketClientEvent.FLOW_RUN_PROGRESS,
-                );
-                switchToDraft();
-              }}
-            />
+            <PublishFlowReminderWidget />
+            <RunInfoWidget />
+            <ViewingOldVersionWidget />
             {middlePanelRef.current &&
               middlePanelRef.current.clientWidth > 0 && (
                 <CanvasControls
@@ -285,23 +230,34 @@ const BuilderPage = () => {
             [minWidthOfSidebar]: rightSidebar !== RightSideBarType.NONE,
             [animateResizeClassName]: !isDraggingHandle,
           })}
+          style={{
+            transitionDuration: `${flowCanvasUtils.sidebarAnimationDuration}ms`,
+          }}
         >
           <div ref={rightSidePanelRef} className="h-full w-full">
             {rightSidebar === RightSideBarType.PIECE_SETTINGS &&
               memorizedSelectedStep && (
-                <StepSettingsProvider
-                  pieceModel={pieceModel}
-                  selectedStep={memorizedSelectedStep}
-                  key={constructContainerKey({
-                    flowVersionId: flowVersion.id,
-                    step: memorizedSelectedStep,
-                    hasPieceModelLoaded: !!pieceModel,
-                  })}
-                >
-                  <StepSettingsContainer />
-                </StepSettingsProvider>
+                <ResizableVerticalPanelsProvider>
+                  <StepSettingsProvider
+                    pieceModel={pieceModel}
+                    selectedStep={memorizedSelectedStep}
+                    key={constructContainerKey({
+                      flowVersionId: flowVersion.id,
+                      step: memorizedSelectedStep,
+                      hasPieceModelLoaded: !!pieceModel,
+                    })}
+                  >
+                    <StepSettingsContainer />
+                  </StepSettingsProvider>
+                </ResizableVerticalPanelsProvider>
               )}
+            {rightSidebar === RightSideBarType.RUNS && <RunsList />}
             {rightSidebar === RightSideBarType.VERSIONS && <FlowVersionsList />}
+            {rightSidebar === RightSideBarType.PROMPT_TO_FLOW && (
+              <PromptToFlowSidebar
+                onShouldReloadCreditUsage={reloadCreditUsage}
+              />
+            )}
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

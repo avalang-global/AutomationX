@@ -7,7 +7,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CardList } from '@/components/custom/card-list';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
-import { LeftSideBarType, useBuilderStateContext } from '../builder-hooks';
+import { RightSideBarType, useBuilderStateContext } from '../builder-hooks';
 import { SidebarHeader } from '../sidebar-header';
 
 import { ChatMessage } from './chat-message';
@@ -39,10 +39,10 @@ export const PromptToFlowSidebar = ({
   const [flow, setLeftSidebar, setFlow, setVersion] = useBuilderStateContext(
     (state) => [
       state.flow,
-      state.setLeftSidebar,
+      state.setRightSidebar,
       state.setFlow,
       state.setVersion,
-    ]
+    ],
   );
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -57,7 +57,7 @@ export const PromptToFlowSidebar = ({
   };
 
   const mapBuilderToPromptMessages = (
-    builderMessages: BuilderMessage[]
+    builderMessages: BuilderMessage[],
   ): PromptMessage[] => {
     const mappedMessages = builderMessages.map((m) => {
       try {
@@ -118,11 +118,12 @@ export const PromptToFlowSidebar = ({
         scrollToLastMessage();
         const freshFlow = await flowsApi.get(flow.id);
         setFlow(freshFlow);
-        setVersion(freshFlow.version, true);
+        // todo(Rupal): set version with boolean isReload
+        setVersion(freshFlow.version);
       } catch (e) {
         console.error(
           'Failed to reload messages or flow after chat response',
-          e
+          e,
         );
       }
     },
@@ -167,7 +168,7 @@ export const PromptToFlowSidebar = ({
   };
 
   const handleCloseSidebar = () => {
-    setLeftSidebar(LeftSideBarType.NONE);
+    setLeftSidebar(RightSideBarType.NONE);
   };
 
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -200,8 +201,8 @@ export const PromptToFlowSidebar = ({
     <div className="relative h-full">
       <div className="absolute top-0 bottom-0 flex flex-col">
         <SidebarHeader onClose={handleCloseSidebar}>AutomationX</SidebarHeader>
-        <div className="pt-0 p-4 flex flex-col flex-grow overflow-hidden">
-          <ScrollArea className="flex-grow overflow-auto">
+        <div className="pt-0 p-4 flex flex-col grow overflow-hidden">
+          <ScrollArea className="grow overflow-auto">
             <CardList className="pb-3 pr-3" listClassName="gap-6">
               {isShowWelcomeMessage && <ChatMessage message={welcomeMessage} />}
               {messages.map((message, index) => (

@@ -1,13 +1,13 @@
-import { ApId, EndpointScope, ListProjectMembersForProjectRoleRequestQuery, PrincipalType, ProjectMember, ProjectRole, SeekPage, UpdateProjectRoleRequestBody } from '@activepieces/shared'
+import { securityAccess } from '@activepieces/server-shared'
+import { ApId, ListProjectMembersForProjectRoleRequestQuery, PrincipalType, ProjectMember, ProjectRole, SeekPage, UpdateProjectRoleRequestBody } from '@activepieces/shared'
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { StatusCodes } from 'http-status-codes'
-import { projectRoleService } from './project-role.service'
 import { projectMemberService } from '../project-member/project-member.service'
+import { projectRoleService } from './project-role.service'
 
 const ListProjectRolesRequest = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.publicPlatform([PrincipalType.USER, PrincipalType.SERVICE]),
     },
     schema: {
         tags: ['project-role'],
@@ -19,8 +19,7 @@ const ListProjectRolesRequest = {
 
 const GetProjectRoleRequest = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.publicPlatform([PrincipalType.USER, PrincipalType.SERVICE]),
     },
     schema: {
         tags: ['project-role'],
@@ -32,8 +31,7 @@ const GetProjectRoleRequest = {
 
 const ProjectMembersForProjectRoleRequest = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.publicPlatform([PrincipalType.USER, PrincipalType.SERVICE]),
     },
     schema: {
         tags: ['project-member'],
@@ -49,8 +47,7 @@ const ProjectMembersForProjectRoleRequest = {
 
 const UpdateProjectRoleRequest = {
     config: {
-      allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-      scope: EndpointScope.PLATFORM,
+        security: securityAccess.platformAdminOnly([PrincipalType.USER, PrincipalType.SERVICE]),
     },
     schema: {
         body: UpdateProjectRoleRequestBody,
@@ -65,8 +62,7 @@ const UpdateProjectRoleRequest = {
 
 const DeleteProjectRoleRequest = {
     config: {
-      allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-      scope: EndpointScope.PLATFORM,
+        security: securityAccess.platformAdminOnly([PrincipalType.USER, PrincipalType.SERVICE]),
     },
     schema: {
         params: Type.Object({

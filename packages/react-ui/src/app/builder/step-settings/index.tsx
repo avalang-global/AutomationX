@@ -25,13 +25,16 @@ import {
 import { formUtils } from '../../../features/pieces/lib/form-utils';
 import { ActionErrorHandlingForm } from '../piece-properties/action-error-handling';
 import { DynamicPropertiesProvider } from '../piece-properties/dynamic-properties-context';
+import { FlowStepInputOutput } from '../run-details/flow-step-input-output';
 import { SidebarHeader } from '../sidebar-header';
 import { TestStepContainer } from '../test-step';
 
+import { AgentSettings } from './agent-settings';
 import { CodeSettings } from './code-settings';
 import EditableStepName from './editable-step-name';
 import { LoopsSettings } from './loops-settings';
 import { PieceSettings } from './piece-settings';
+import { useResizableVerticalPanelsContext } from './resizable-vertical-panels-context';
 import { RouterSettings } from './router-settings';
 import { StepInfo } from './step-info';
 import { useStepSettingsContext } from './step-settings-context';
@@ -46,6 +49,7 @@ const StepSettingsContainer = () => {
     flowVersion,
     selectedBranchIndex,
     setSelectedBranchIndex,
+    run,
   ] = useBuilderStateContext((state) => [
     state.readonly,
     state.exitStepSettings,
@@ -54,6 +58,7 @@ const StepSettingsContainer = () => {
     state.flowVersion,
     state.selectedBranchIndex,
     state.setSelectedBranchIndex,
+    state.run,
   ]);
 
   const { stepMetadata } = stepsHooks.useStepMetadata({
@@ -114,6 +119,9 @@ const StepSettingsContainer = () => {
 
   const sidebarHeaderContainerRef = useRef<HTMLDivElement>(null);
   const modifiedStep = form.getValues();
+  const showGenerateSampleData = !readonly;
+  const showStepInputOutFromRun = !isNil(run);
+
   const [isEditingStepOrBranchName, setIsEditingStepOrBranchName] =
     useState(false);
   const showActionErrorHandlingForm =
@@ -121,10 +129,16 @@ const StepSettingsContainer = () => {
       modifiedStep.type as FlowActionType,
     ) && !isNil(stepMetadata);
 
+  const runAgentStep =
+    modifiedStep.settings.pieceName === '@activepieces/piece-ai' &&
+    modifiedStep.settings.actionName === 'run_agent';
+
   useEffect(() => {
     //RHF doesn't automatically trigger validation when the form is rendered, so we need to trigger it manually
     form.trigger();
   }, []);
+
+  const { height, setHeight } = useResizableVerticalPanelsContext();
 
   return (
     <Form {...form}>
@@ -171,7 +185,7 @@ const StepSettingsContainer = () => {
           key={`${selectedStep.name}-${selectedStep.type}`}
         >
           <ResizablePanelGroup direction="vertical">
-            <ResizablePanel defaultSize={55} className="min-h-[80px]">
+            <ResizablePanel className="min-h-[80px]">
               <ScrollArea className="h-full">
                 <div className="flex flex-col gap-2 px-4 pb-6">
                   <StepInfo step={modifiedStep}></StepInfo>
@@ -183,6 +197,16 @@ const StepSettingsContainer = () => {
                     <CodeSettings readonly={readonly}></CodeSettings>
                   )}
                   {modifiedStep.type === FlowActionType.PIECE &&
+                    runAgentStep &&
+                    modifiedStep && (
+                      <AgentSettings
+                        step={modifiedStep}
+                        flowId={flowVersion.flowId}
+                        readonly={readonly}
+                      />
+                    )}
+                  {modifiedStep.type === FlowActionType.PIECE &&
+                    !runAgentStep &&
                     modifiedStep && (
                       <PieceSettings
                         step={modifiedStep}
@@ -222,12 +246,17 @@ const StepSettingsContainer = () => {
                 </div>
               </ScrollArea>
             </ResizablePanel>
-            {!readonly && (
+
+            {(showGenerateSampleData || showStepInputOutFromRun) && (
               <>
                 <ResizableHandle withHandle={true} />
-                <ResizablePanel defaultSize={45} className="min-h-[130px]">
-                  <ScrollArea className="h-[calc(100%-35px)] p-4 pb-10 ">
-                    {modifiedStep.type && (
+                <ResizablePanel
+                  defaultSize={height}
+                  onResize={(size) => setHeight(size)}
+                  className="min-h-[130px]"
+                >
+                  <ScrollArea className="h-[calc(100%-35px)]  ">
+                    {showGenerateSampleData && (
                       <TestStepContainer
                         type={modifiedStep.type}
                         flowId={flowVersion.flowId}
@@ -235,6 +264,9 @@ const StepSettingsContainer = () => {
                         projectId={project?.id}
                         isSaving={saving}
                       ></TestStepContainer>
+                    )}
+                    {showStepInputOutFromRun && (
+                      <FlowStepInputOutput></FlowStepInputOutput>
                     )}
                   </ScrollArea>
                 </ResizablePanel>

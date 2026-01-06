@@ -1,3 +1,4 @@
+import { securityAccess } from '@activepieces/server-shared'
 import { assertNotNullOrUndefined, ListOAuth2AppRequest, OAuthApp, PrincipalType, SeekPage, UpsertOAuth2AppRequest } from '@activepieces/shared'
 import {
     FastifyPluginAsyncTypebox,
@@ -8,20 +9,15 @@ import { StatusCodes } from 'http-status-codes'
 import { oauthAppService } from './oauth-app.service'
 
 export const oauthAppModule: FastifyPluginAsyncTypebox = async (app) => {
-    await app.register(readOauthAppModule)
-    await app.register(writeOauthAppModule)
+    await app.register(oauthAppController, { prefix: '/v1/oauth-apps' })
 }
 
-const readOauthAppModule: FastifyPluginAsyncTypebox = async (app) => {
-    await app.register(readOauthAppController, { prefix: '/v1/oauth-apps' })
-}
-
-const readOauthAppController: FastifyPluginAsyncTypebox = async (app) => {
+const oauthAppController: FastifyPluginAsyncTypebox = async (app) => {
     app.get(
         '/',
         {
             config: {
-                allowedPrincipals: [PrincipalType.USER] as const,
+                security: securityAccess.platformAdminOnly([PrincipalType.USER]),
             },
             schema: {
                 querystring: ListOAuth2AppRequest,
@@ -39,19 +35,12 @@ const readOauthAppController: FastifyPluginAsyncTypebox = async (app) => {
             })
         },
     )
-}
 
-const writeOauthAppModule: FastifyPluginAsyncTypebox = async (app) => {
-    // app.addHook('preHandler', platformMustBeOwnedByCurrentUser)
-    await app.register(oauthAppController, { prefix: '/v1/oauth-apps' })
-}
-
-const oauthAppController: FastifyPluginAsyncTypebox = async (app) => {
     app.post(
         '/',
         {
             config: {
-                allowedPrincipals: [PrincipalType.USER] as const,
+                security: securityAccess.platformAdminOnly([PrincipalType.USER]),
             },
             schema: {
                 body: UpsertOAuth2AppRequest,
@@ -71,7 +60,7 @@ const oauthAppController: FastifyPluginAsyncTypebox = async (app) => {
         '/:id',
         {
             config: {
-                allowedPrincipals: [PrincipalType.USER] as const,
+                security: securityAccess.platformAdminOnly([PrincipalType.USER]),
             },
             schema: {
                 params: GetIdParams,

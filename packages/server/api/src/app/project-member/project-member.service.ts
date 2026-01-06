@@ -1,8 +1,10 @@
-import { apId, Cursor, ProjectMember, SeekPage } from '@activepieces/shared'
+import { apId, Cursor, DefaultProjectRole, PlatformRole, ProjectId, ProjectMember, ProjectRole, SeekPage, UserId } from '@activepieces/shared'
 import { repoFactory } from '../core/db/repo-factory'
 import { buildPaginator } from '../helper/pagination/build-paginator'
 import { paginationHelper } from '../helper/pagination/pagination-utils'
 import { projectService } from '../project/project-service'
+import { projectRoleService } from '../project-role/project-role.service'
+import { userService } from '../user/user-service'
 import { ProjectMemberEntity } from './project-member.entity'
 
 export const projectMemberRepo = repoFactory(ProjectMemberEntity)
@@ -83,6 +85,37 @@ export const projectMemberService = {
             platformId: params.platformId,
         })
         return projectMembers.map((member) => member.projectId)
+    },
+    async getRole(params: { projectId: ProjectId, userId: UserId }): Promise<ProjectRole | null> {
+        const { projectId, userId } = params
+        const project = await projectService.getOneOrThrow(projectId)
+        const user = await userService.getOneOrFail({
+            id: userId,
+        })
+
+        if (user.id === project.ownerId) {
+            return projectRoleService.getByNameAndPlatform({ name: DefaultProjectRole.ADMIN, platformId: project.platformId })
+        }
+        if (project.platformId === user.platformId && user.platformRole === PlatformRole.ADMIN) {
+            return projectRoleService.getByNameAndPlatform({ name: DefaultProjectRole.ADMIN, platformId: project.platformId })
+        }
+        if (project.platformId === user.platformId && user.platformRole === PlatformRole.OPERATOR) {
+            return projectRoleService.getByNameAndPlatform({ name: DefaultProjectRole.OPERATOR, platformId: project.platformId })
+        }
+        const member = await projectMemberRepo().findOneBy({
+            projectId,
+            userId,
+        })
+
+        if (!member) {
+            return null
+        }
+
+        const projectRole = await projectRoleService.getById({
+            id: member.projectRoleId,
+        })
+
+        return projectRole
     },
 }
 

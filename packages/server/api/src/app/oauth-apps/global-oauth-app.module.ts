@@ -1,3 +1,4 @@
+import { securityAccess } from '@activepieces/server-shared'
 import {
     GlobalOAuthApp,
     ListOAuth2AppRequest,
@@ -21,7 +22,7 @@ const readGlobalOauthAppController: FastifyPluginAsyncTypebox = async (app) => {
         '/',
         {
             config: {
-                allowedPrincipals: [PrincipalType.USER] as const,
+                security: securityAccess.platformAdminOnly([PrincipalType.USER]),
             },
             schema: {
                 querystring: ListOAuth2AppRequest,

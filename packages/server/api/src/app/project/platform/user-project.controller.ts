@@ -3,8 +3,21 @@ This is a custom implementation to support platform projects with access control
 The logic has been isolated to this file to avoid potential conflicts with the open-source modules from upstream
 */
 
-import { assertNotNullOrUndefined, ListProjectRequestForUserQueryParams, PrincipalType, Project, ProjectsWithPlatform, SeekPage } from '@activepieces/shared'
-import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
+import { ProjectResourceType, securityAccess } from '@activepieces/server-shared'
+import {
+    assertNotNullOrUndefined,
+    ListProjectRequestForUserQueryParams,
+    PrincipalType,
+    Project,
+    ProjectsWithPlatform,
+    ProjectWithLimits,
+    ProjectWithLimitsWithPlatform,
+    SeekPage,
+} from '@activepieces/shared'
+import {
+    FastifyPluginAsyncTypebox,
+    Type,
+} from '@fastify/type-provider-typebox'
 import { StatusCodes } from 'http-status-codes'
 import { platformService } from '../../platform/platform.service'
 import { userService } from '../../user/user-service'
@@ -13,7 +26,7 @@ import { platformProjectService } from './platform-project.service'
 export const userPlatformProjectController: FastifyPluginAsyncTypebox = async (fastify) => {
     // Overrides the same endpoint handler in the open source counter-part
     fastify.get('/:id', GetProjectRequestForUser, async (request) => {
-        return platformProjectService(request.log).getWithPlanAndUsageOrThrow(request.principal.projectId)
+        return platformProjectService(request.log).getWithPlanAndUsageOrThrow(request.projectId)
     })
 
     // Overrides the same endpoint handler in the open source counter-part
@@ -57,13 +70,18 @@ async function getPlatformsForUser(identityId: string, platformId: string) {
 
 const GetProjectRequestForUser = {
     config: {
-        allowedPrincipals: [PrincipalType.USER] as const,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            undefined, {
+                type: ProjectResourceType.PARAM,
+                paramKey: 'id',
+            }),
     },
 }
 
 const ListProjectRequestForUser = {
     config: {
-        allowedPrincipals: [PrincipalType.USER] as const,
+        security: securityAccess.publicPlatform([PrincipalType.USER]),
     },
     schema: {
         response: {
@@ -75,7 +93,7 @@ const ListProjectRequestForUser = {
 
 const ListProjectsForPlatforms = {
     config: {
-        allowedPrincipals: [PrincipalType.USER] as const,
+        security: securityAccess.publicPlatform([PrincipalType.USER]),
     },
     schema: {
         response: {

@@ -4,23 +4,33 @@ The logic has been isolated to this file to avoid potential conflicts with the o
 */
 
 import {
-    ActivepiecesError, assertNotNullOrUndefined,
+    assertNotNullOrUndefined,
     Cursor,
     EndpointScope,
-    ErrorCode,
-    FlowStatus, Metadata, PiecesFilterType, PlatformId,
+    FlowStatus,
+    isNil,
+    Metadata,
+    PiecesFilterType,
+    PlatformId,
     Project,
-    ProjectId, ProjectType, ProjectWithLimits, SeekPage,
+    ProjectId,
+    ProjectType,
+    ProjectWithLimits,
+    SeekPage,
     spreadIfDefined,
+    UserId,
     UserStatus,
 } from '@activepieces/shared'
 import { FastifyBaseLogger } from 'fastify'
-import { Equal, ILike, In, IsNull } from 'typeorm'
+import { Equal, ILike, In } from 'typeorm'
 import { appConnectionService } from '../../app-connection/app-connection-service/app-connection-service'
 import { repoFactory } from '../../core/db/repo-factory'
+import { transaction } from '../../core/db/transaction'
+import { flowRepo } from '../../flows/flow/flow.repo'
 import { flowService } from '../../flows/flow/flow.service'
 import { buildPaginator } from '../../helper/pagination/build-paginator'
 import { paginationHelper } from '../../helper/pagination/pagination-utils'
+import { Order } from '../../helper/pagination/paginator'
 import { ProjectEntity } from '../../project/project-entity'
 import { projectService } from '../../project/project-service'
 import { projectMemberRepo } from '../../project-member/project-member.service'
@@ -47,7 +57,6 @@ export const platformProjectService = (log: FastifyBaseLogger) => ({
     async getWithPlanAndUsageOrThrow(projectId: string): Promise<Project> {
         return projectRepo().findOneByOrFail({
             id: projectId,
-            deleted: IsNull(),
         })
     },
 
@@ -60,10 +69,35 @@ export const platformProjectService = (log: FastifyBaseLogger) => ({
         return enrichProject(project, log)
     },
 
-    async hardDelete({ id }: HardDeleteParams): Promise<void> {
-        await assertAllProjectFlowsAreDisabled({ projectId: id }, log)
-        await projectRepo().delete({ id })
-        await appConnectionService(log).deleteAllProjectConnections(id)
+    async deletePersonalProjectForUser({ userId, platformId }: DeletePersonalProjectForUserParams): Promise<void> {
+        const personalProject = await projectRepo().findOneBy({
+            platformId,
+            ownerId: userId,
+            type: ProjectType.PERSONAL,
+        })
+        if (!isNil(personalProject)) {
+            await this.hardDelete({ id: personalProject.id, platformId })
+        }
+    },
+
+    async hardDelete({ id, platformId }: HardDeleteParams): Promise<void> {
+        await transaction(async (entityManager) => {
+            const allFlows = await flowRepo(entityManager).find({
+                where: {
+                    projectId: id,
+                },
+                select: {
+                    id: true,
+                },
+            })
+            await Promise.all(allFlows.map((flow) => flowService(log).delete({ id: flow.id, projectId: id })))
+            await appConnectionService(log).deleteAllProjectConnections(id)
+            await projectRepo(entityManager).delete({
+                id,
+                platformId,
+            })
+        })
+
     },
 })
 
@@ -74,15 +108,27 @@ async function getProjects(params: GetAllParams & { projectIds?: string[] }, log
         entity: ProjectEntity,
         query: {
             limit,
-            order: 'ASC',
             afterCursor: decodedCursor.nextCursor,
             beforeCursor: decodedCursor.previousCursor,
+            orderBy: [
+                {
+                    field: 'type',
+                    order: Order.ASC,
+                },
+                {
+                    field: 'displayName',
+                    order: Order.ASC,
+                },
+                {
+                    field: 'id',
+                    order: Order.ASC,
+                },
+            ],
         },
     })
     const displayNameFilter = displayName ? ILike(`%${displayName}%`) : undefined
     const filters = {
         platformId: Equal(platformId),
-        deleted: IsNull(),
         ...spreadIfDefined('externalId', externalId),
         ...spreadIfDefined('displayName', displayNameFilter),
         ...(projectIds ? { id: In(projectIds) } : {}),
@@ -94,12 +140,15 @@ async function getProjects(params: GetAllParams & { projectIds?: string[] }, log
         .where(filters)
 
     const { data, cursor } = await paginator.paginate(queryBuilder)
-
     const projects: ProjectWithLimits[] = await Promise.all(
         data.map((project) => enrichProject(project, log)),
     )
-
     return paginationHelper.createPage<ProjectWithLimits>(projects, cursor)
+}
+
+type DeletePersonalProjectForUserParams = {
+    userId: UserId
+    platformId: PlatformId
 }
 
 type GetAllForParamsAndUser = {
@@ -161,23 +210,6 @@ export async function enrichProject(project: Project, log: FastifyBaseLogger): P
     }
 }
 
-const assertAllProjectFlowsAreDisabled = async (params: AssertAllProjectFlowsAreDisabledParams, log: FastifyBaseLogger): Promise<void> => {
-    const { projectId } = params
-
-    const projectHasEnabledFlows = await flowService(log).existsByProjectAndStatus({
-        projectId,
-        status: FlowStatus.ENABLED,
-    })
-
-    if (projectHasEnabledFlows) {
-        throw new ActivepiecesError({
-            code: ErrorCode.VALIDATION,
-            params: {
-                message: 'PROJECT_HAS_ENABLED_FLOWS',
-            },
-        })
-    }
-}
 
 type UpdateParams = {
     projectId: ProjectId
@@ -192,10 +224,7 @@ type UpdateProjectRequestParams = {
     metadata?: Metadata
 }
 
-type AssertAllProjectFlowsAreDisabledParams = {
-    projectId: ProjectId
-}
-
 type HardDeleteParams = {
     id: ProjectId
+    platformId: PlatformId
 }
