@@ -1,6 +1,8 @@
-import { BuilderMessage, EndpointScope, PrincipalType } from '@activepieces/shared'
+import { ProjectResourceType, securityAccess } from '@activepieces/server-shared'
+import { BuilderMessage, Permission, PrincipalType } from '@activepieces/shared'
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { StatusCodes } from 'http-status-codes'
+import { FlowEntity } from '../flows/flow/flow.entity'
 import { builderService } from './builder.service'
 
 
@@ -10,7 +12,7 @@ export const builderModule: FastifyPluginAsyncTypebox = async (app) => {
 
 const builderController: FastifyPluginAsyncTypebox = async (app) => {
     app.get('/flow/:id', GetBuilderFlowRequestParams, async (request, reply) => {
-        const projectId = request.principal.projectId
+        const projectId = request.projectId
         const flowId = request.params.id
         const messages = await builderService(app.log).fetchMessages({
             projectId,
@@ -22,7 +24,7 @@ const builderController: FastifyPluginAsyncTypebox = async (app) => {
 
     app.post('/flow/:id', UpdateBuilderFlowRequestParams, async (request) => {
         const platformId = request.principal.platform.id
-        const projectId = request.principal.projectId
+        const projectId = request.projectId
         const userId = request.principal.id
         const { messages } = request.body
         const text = await builderService(request.log).runAndUpdate({
@@ -46,8 +48,14 @@ const GetBuilderFlowRequestParams = {
         },
     },
     config: {
-        allowedPrincipals: [PrincipalType.USER] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.READ_FLOW,
+            {
+                type: ProjectResourceType.TABLE,
+                tableName: FlowEntity,
+            }
+        ),
     },
 }
 
@@ -69,7 +77,13 @@ const UpdateBuilderFlowRequestParams = {
         },
     },
     config: {
-        allowedPrincipals: [PrincipalType.USER] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.WRITE_FLOW,
+            {
+                type: ProjectResourceType.TABLE,
+                tableName: FlowEntity,
+            }
+        ),
     },
 }

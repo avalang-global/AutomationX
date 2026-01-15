@@ -1,4 +1,5 @@
 // import { ApplicationEventName } from '@activepieces/ee-shared'
+import { ProjectResourceType, securityAccess } from '@activepieces/server-shared'
 import {
     ActivepiecesError,
     CreateFolderRequest,
@@ -15,7 +16,8 @@ import { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox'
 import { Type } from '@sinclair/typebox'
 import { StatusCodes } from 'http-status-codes'
 import { entitiesMustBeOwnedByCurrentProject } from '../../authentication/authorization'
-// import { eventsHooks } from '../../helper/application-events'
+// import { applicationEvents } from '../../helper/application-events'
+import { FolderEntity } from './folder.entity'
 import { flowFolderService as folderService } from './folder.service'
 
 const DEFAULT_PAGE_SIZE = 10
@@ -29,7 +31,7 @@ const folderController: FastifyPluginAsyncTypebox = async (fastify) => {
     fastify.post('/', CreateFolderParams, async (request) => {
         // Disallow duplicate folder creation
         const folderWithDisplayName = await folderService(request.log).getOneByDisplayNameCaseInsensitive({
-            projectId: request.principal.projectId, 
+            projectId: request.projectId,
             displayName: request.body.displayName,
         })
         if (!isNil(folderWithDisplayName)) {
@@ -39,10 +41,10 @@ const folderController: FastifyPluginAsyncTypebox = async (fastify) => {
             })
         }
         const createdFolder = await folderService(request.log).upsert({
-            projectId: request.principal.projectId,
+            projectId: request.projectId,
             request: request.body,
         })
-        // eventsHooks.get(request.log).sendUserEventFromRequest(request, {
+        // applicationEvents.sendUserEvent(request, {
         //     action: ApplicationEventName.FOLDER_CREATED,
         //     data: {
         //         folder: createdFolder,
@@ -57,12 +59,12 @@ const folderController: FastifyPluginAsyncTypebox = async (fastify) => {
         UpdateFolderParams,
         async (request) => {
             const updatedFlow = await folderService(request.log).update({
-                projectId: request.principal.projectId,
+                projectId: request.projectId,
                 folderId: request.params.id,
                 request: request.body,
             })
 
-            // eventsHooks.get(request.log).sendUserEventFromRequest(request, {
+            // applicationEvents.sendUserEvent(request, {
             //     action: ApplicationEventName.FOLDER_UPDATED,
             //     data: {
             //         folder: updatedFlow,
@@ -80,7 +82,7 @@ const folderController: FastifyPluginAsyncTypebox = async (fastify) => {
             request,
         ) => {
             return folderService(request.log).getOneOrThrow({
-                projectId: request.principal.projectId,
+                projectId: request.projectId,
                 folderId: request.params.id,
             })
         },
@@ -91,7 +93,7 @@ const folderController: FastifyPluginAsyncTypebox = async (fastify) => {
         ListFoldersParams,
         async (request) => {
             return folderService(request.log).list({
-                projectId: request.principal.projectId,
+                projectId: request.projectId,
                 cursorRequest: request.query.cursor ?? null,
                 limit: request.query.limit ?? DEFAULT_PAGE_SIZE,
             })
@@ -103,17 +105,17 @@ const folderController: FastifyPluginAsyncTypebox = async (fastify) => {
         DeleteFolderParams,
         async (request, reply) => {
             const folder = await folderService(request.log).getOneOrThrow({
-                projectId: request.principal.projectId,
+                projectId: request.projectId,
                 folderId: request.params.id,
             })
-            // eventsHooks.get(request.log).sendUserEventFromRequest(request, {
+            // applicationEvents.sendUserEvent(request, {
             //     action: ApplicationEventName.FOLDER_DELETED,
             //     data: {
             //         folder,
             //     },
             // })
             await folderService(request.log).delete({
-                projectId: request.principal.projectId,
+                projectId: request.projectId,
                 folderId: request.params.id,
             })
             return reply.status(StatusCodes.OK).send()
@@ -124,8 +126,11 @@ const folderController: FastifyPluginAsyncTypebox = async (fastify) => {
 
 const CreateFolderParams = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        permission: Permission.WRITE_FLOW,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.WRITE_FLOW, {
+                type: ProjectResourceType.BODY,
+            }),
     },
     schema: {
         tags: ['folders'],
@@ -137,8 +142,12 @@ const CreateFolderParams = {
 
 const UpdateFolderParams = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        permission: Permission.WRITE_FLOW,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.WRITE_FLOW, {
+                type: ProjectResourceType.TABLE,
+                tableName: FolderEntity,
+            }),
     },
     schema: {
         tags: ['folders'],
@@ -153,8 +162,12 @@ const UpdateFolderParams = {
 
 const GetFolderParams = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        permission: Permission.READ_FLOW,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.READ_FLOW, {
+                type: ProjectResourceType.TABLE,
+                tableName: FolderEntity,
+            }),
     },
     schema: {
         tags: ['folders'],
@@ -168,8 +181,11 @@ const GetFolderParams = {
 
 const ListFoldersParams = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        permission: Permission.READ_FLOW,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.READ_FLOW, {
+                type: ProjectResourceType.QUERY,
+            }),
     },
     schema: {
         tags: ['folders'],
@@ -181,8 +197,12 @@ const ListFoldersParams = {
 
 const DeleteFolderParams = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        permission: Permission.WRITE_FLOW,
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.WRITE_FLOW, {
+                type: ProjectResourceType.TABLE,
+                tableName: FolderEntity,
+            }),
     },
     schema: {
         params: DeleteFolderRequest,

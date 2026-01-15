@@ -1,8 +1,9 @@
-import { apId, Cursor, ProjectMember, SeekPage } from '@activepieces/shared'
+import { apId, Cursor, ProjectMember, ProjectRole, SeekPage } from '@activepieces/shared'
 import { repoFactory } from '../core/db/repo-factory'
 import { buildPaginator } from '../helper/pagination/build-paginator'
 import { paginationHelper } from '../helper/pagination/pagination-utils'
 import { projectService } from '../project/project-service'
+import { projectRoleService } from '../project-role/project-role.service'
 import { ProjectMemberEntity } from './project-member.entity'
 
 export const projectMemberRepo = repoFactory(ProjectMemberEntity)
@@ -41,6 +42,28 @@ export const projectMemberService = {
     },
     async delete({ projectId, projectMemberId }: DeleteParams): Promise<void> {
         await projectMemberRepo().delete({ projectId, id: projectMemberId })
+    },
+    async getRole({
+        userId,
+        projectId,
+    }: {
+        projectId: string
+        userId: string
+    }): Promise<ProjectRole | null> {
+        const member = await projectMemberRepo().findOneBy({
+            projectId,
+            userId,
+        })
+
+        if (!member) {
+            return null
+        }
+
+        const projectRole = await projectRoleService.getById({
+            id: member.projectRoleId,
+        })
+
+        return projectRole
     },
     async list(
         {

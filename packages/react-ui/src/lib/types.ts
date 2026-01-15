@@ -83,11 +83,6 @@ export type PieceSelectorOperation =
       stepName: string;
     };
 
-export type AskAiButtonOperations = Exclude<
-  PieceSelectorOperation,
-  { type: FlowOperationType.UPDATE_TRIGGER }
->;
-
 export type PieceSelectorPieceItem =
   | {
       actionOrTrigger: TriggerBase;
@@ -105,3 +100,16 @@ export type PieceSelectorPieceItem =
 export type PieceSelectorItem = PieceSelectorPieceItem | PrimitiveStepMetadata;
 
 export type HandleSelectActionOrTrigger = (item: PieceSelectorItem) => void;
+
+export enum RightSideBarType {
+  NONE = 'none',
+  PIECE_SETTINGS = 'piece-settings',
+  VERSIONS = 'versions',
+  RUNS = 'runs',
+  PROMPT_TO_FLOW = 'prompt-to-flow',
+}
+
+export enum ChatDrawerSource {
+  TEST_FLOW = 'test-flow',
+  TEST_STEP = 'test-step',
+}

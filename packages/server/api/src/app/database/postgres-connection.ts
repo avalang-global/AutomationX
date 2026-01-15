@@ -114,11 +114,22 @@ import { RemovePlatformSMTP1764945141702 } from './migration/postgres/1764945141
 import { AddPersonalProjectsForAllUsers1765107860778 } from './migration/postgres/1765107860778-AddPersonalProjectsForAllUsers'
 import { AddLastActiveToUser1765325909187 } from './migration/postgres/1765325909187-AddLastActiveToUser'
 import { AddStepsExecutedAndAICreditsToFlowRun1765461560795 } from './migration/postgres/1765461560795-AddStepsExecutedAndAICreditsToFlowRun'
+import { AddDisplayNameToAiProviders1765757655723 } from './migration/postgres/1765757655723-add-display-name-to-ai-providers'
 import { AddTemplateStatus1765894492098 } from './migration/postgres/1765894492098-AddTemplateStatus'
 import { MigrateOldTemplatesToNewSchema1765993826655 } from './migration/postgres/1765993826655-MigrateOldTemplatesToNewSchema'
 import { DropLegacyTables1766015156683 } from './migration/postgres/1766015156683-DropLegacyTables'
 import { AddAnalyticsReport1766038629198 } from './migration/postgres/1766038629198-add-analytics-report'
 import { RecreateMcpToolTable1766072572000 } from './migration/postgres/1766072572000-RecreateMcpToolTable'
+import { AddAuthConfigInAiProviders1766328841463 } from './migration/postgres/1766328841463-addAuthConfigInAiProviders'
+import { PlatformIdAndProviderUnique1766375959255 } from './migration/postgres/1766375959255-PlatformIdAndProviderUnique'
+import { AnalyticsAndOwnerToFlowId1767127482383 } from './migration/postgres/1767127482383-AnalyticsAndOwnerToFlowId'
+import { AddBadges1767141831647 } from './migration/postgres/1767141831647-AddBadges'
+import { AddFlowOwnerIndex1767610587266 } from './migration/postgres/1767610587266-AddFlowOwnerIndex'
+import { MigrateOldTemplateCategoriesToDynamicOne1767624311536 } from './migration/postgres/1767624311536-MigrateOldTemplateCategoriesToDynamicOne'
+import { AddTriggeredBy1767697998391 } from './migration/postgres/1767697998391-AddTriggeredBy'
+import { UpdateCacheStructure1767904545112 } from './migration/postgres/1767904545112-UpdateCacheStructure'
+import { AddOutdatedToReport1767994436597 } from './migration/postgres/1767994436597-AddOutdatedToReport'
+import { AddNotesToFlowVersion1768130030028 } from './migration/postgres/1768130030028-AddNotesToFlowVersion'
 
 const getSslConfig = (): boolean | TlsOptions => {
     const useSsl = system.get(AppSystemProp.POSTGRES_USE_SSL)
@@ -132,6 +143,17 @@ const getSslConfig = (): boolean | TlsOptions => {
 
 export const getMigrations = (): (new () => MigrationInterface)[] => {
     const migrations: (new () => MigrationInterface)[] = [
+        AddNotesToFlowVersion1768130030028,
+        AddOutdatedToReport1767994436597,
+        UpdateCacheStructure1767904545112,
+        AddTriggeredBy1767697998391,
+        MigrateOldTemplateCategoriesToDynamicOne1767624311536,
+        AddFlowOwnerIndex1767610587266,
+        AddBadges1767141831647,
+        AnalyticsAndOwnerToFlowId1767127482383,
+        PlatformIdAndProviderUnique1766375959255,
+        AddAuthConfigInAiProviders1766328841463,
+        AddDisplayNameToAiProviders1765757655723,
         RecreateMcpToolTable1766072572000,
         DropLegacyTables1766015156683,
         MigrateOldTemplatesToNewSchema1765993826655,
@@ -250,7 +272,7 @@ export const getMigrations = (): (new () => MigrationInterface)[] => {
 
 
 export const createPostgresDataSource = (): DataSource => {
-    const migrationConfig: MigrationConfig =  {
+    const migrationConfig: MigrationConfig = {
         migrationsRun: true,
         migrationsTransactionMode: 'each',
         migrations: getMigrations(),

@@ -54,6 +54,7 @@ import { TodoEntity } from '../todos/todo.entity'
 import { AppEventRoutingEntity } from '../trigger/app-event-routing/app-event-routing.entity'
 import { TriggerEventEntity } from '../trigger/trigger-events/trigger-event.entity'
 import { TriggerSourceEntity } from '../trigger/trigger-source/trigger-source-entity'
+import { UserBadgeEntity } from '../user/badges/badge-entity'
 import { UserEntity } from '../user/user-entity'
 import { UserInvitationEntity } from '../user-invitations/user-invitation.entity'
 import { createPGliteDataSource } from './pglite-connection'
@@ -98,6 +99,7 @@ function getEntities(): EntitySchema<unknown>[] {
         ProjectRoleEntity,
         ProjectMemberEntity,
         TriggerSourceEntity,
+        UserBadgeEntity,
         // Enterprise
         ProjectMemberEntity,
         // ProjectPlanEntity,
@@ -116,6 +118,7 @@ function getEntities(): EntitySchema<unknown>[] {
         // ConnectionKeyEntity,
         // AppCredentialEntity,
         // PlatformPlanEntity,
+
     ]
 }
 

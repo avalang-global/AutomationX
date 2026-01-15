@@ -1,7 +1,7 @@
 // import { OPEN_SOURCE_PLAN } from '@activepieces/ee-shared'
 import {
     ActivepiecesError,
-    AiOverageState,
+    AiCreditsAutoTopUpState,
     ApEdition,
     apId,
     ErrorCode,
@@ -27,20 +27,17 @@ import { userService } from '../user/user-service'
 import { PlatformEntity } from './platform.entity'
 
 const DEFAULT_PLAN = {
-    eligibleForTrial: 'false',
-    eligibleForPlusTrial: 'false',
     embeddingEnabled: false,
     tablesEnabled: true,
     todosEnabled: true,
     globalConnectionsEnabled: false,
     customRolesEnabled: false,
-    tasksLimit: undefined,
+
+    aiCreditsAutoTopUpState: AiCreditsAutoTopUpState.DISABLED,
 
     agentsEnabled: true,
     mcpsEnabled: true,
     includedAiCredits: 0,
-    aiCreditsOverageLimit: undefined,
-    aiCreditsOverageState: AiOverageState.ALLOWED_BUT_OFF,
     environmentsEnabled: false,
     agentsLimit: undefined,
     analyticsEnabled: true,
@@ -75,6 +72,7 @@ export const platformService = {
             const hasProjects = await projectService.userHasProjects({
                 platformId: user.platformId,
                 userId: user.id,
+                isPrivileged: userService.isUserPrivileged(user),
             })
             return hasProjects ? user.platformId : null
         }))

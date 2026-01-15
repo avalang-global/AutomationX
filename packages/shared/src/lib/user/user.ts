@@ -1,6 +1,7 @@
 import { Static, Type } from '@sinclair/typebox'
 import { BaseModelSchema, Nullable } from '../common/base-model'
 import { ApId } from '../common/id-generator'
+import { UserBadge } from './badges'
 
 export type UserId = ApId
 
@@ -68,24 +69,10 @@ export const UserWithMetaInformation = Type.Object({
 
 export type UserWithMetaInformation = Static<typeof UserWithMetaInformation>
 
-export const UserWithMetaInformationAndProject = Type.Object({
-    id: Type.String(),
-    email: Type.String(),
-    identityId: Type.String(),
-    firstName: Type.String(),
-    status: Type.Enum(UserStatus),
-    externalId: Nullable(Type.String()),
-    platformId: Nullable(Type.String()),
-    platformRole: Type.Enum(PlatformRole),
-    lastName: Type.String(),
-    created: Type.String(),
-    updated: Type.String(),
-    projectId: Type.String(),
-    trackEvents: Type.Boolean(),
-    newsLetter: Type.Boolean(),
-    verified: Type.Boolean(),
-    profileImageUrl: Type.Optional(Type.String()),
-    lastActiveDate: Nullable(Type.String()),
+
+export const UserWithBadges = Type.Object({
+    ...UserWithMetaInformation.properties,
+    badges: Type.Array(Type.Pick(UserBadge, ['name', 'created'])),
 })
 
-export type UserWithMetaInformationAndProject = Static<typeof UserWithMetaInformationAndProject>
+export type UserWithBadges = Static<typeof UserWithBadges>
