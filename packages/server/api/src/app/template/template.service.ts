@@ -54,7 +54,6 @@ export const templateService = (log: FastifyBaseLogger) => ({
                     blogUrl,
                     metadata,
                     author,
-                    usageCount: 0,
                     categories,
                     pieces,
                     flows,
@@ -108,10 +107,6 @@ export const templateService = (log: FastifyBaseLogger) => ({
                 return platformTemplateService().update({ id, params })
             }
         }
-    },
-
-    async incrementUsageCount({ id }: IncrementUsageCountParams): Promise<void> {
-        await templateRepo().increment({ id }, 'usageCount', 1)
     },
 
     async list({ platformId, pieces, tags, search, type, category }: ListParams): Promise<SeekPage<Template>> {
@@ -198,8 +193,4 @@ type DeleteParams = {
 type UpdateParams = {
     id: string
     params: UpdateTemplateRequestBody
-}
-
-type IncrementUsageCountParams = {
-    id: string
 }

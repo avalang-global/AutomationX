@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { McpSvg } from '@/assets/img/custom/mcp';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -171,10 +172,18 @@ export function ProjectSettingsDialog({
   };
 
   const renderTabHeader = () => {
+    const hasUnsavedChanges = activeTab === 'general' && form.formState.isDirty;
     return (
-      <span className="text-lg font-bold">
-        {tabs.find((tab) => tab.id === activeTab)?.label}
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-lg font-bold">
+          {tabs.find((tab) => tab.id === activeTab)?.label}
+        </span>
+        {hasUnsavedChanges && (
+          <Badge variant="ghost" className="text-muted-foreground">
+            {t('Unsaved changes')}
+          </Badge>
+        )}
+      </div>
     );
   };
   const renderDialogFooter = () => {
@@ -203,6 +212,8 @@ export function ProjectSettingsDialog({
     );
   };
 
+  const currentIconColor = form.watch('icon')?.color ?? project.icon.color;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl w-full max-h-[95vh] rounded-sm flex flex-col p-0">
@@ -210,8 +221,8 @@ export function ProjectSettingsDialog({
           <div className="w-[238px]">
             <nav className="bg-sidebar space-y-1 bg-muted rounded-sm rounded-r-none h-full flex flex-col rounded-l-md">
               <ApProjectDisplay
-                title={project.displayName}
-                icon={project.icon}
+                title={form.watch('projectName') ?? project.displayName}
+                icon={form.watch('icon') ?? project.icon}
                 containerClassName="px-3 my-4"
                 titleClassName="text-md font-bold"
                 maxLengthToNotShowTooltip={18}
@@ -243,7 +254,7 @@ export function ProjectSettingsDialog({
                   <ProjectAvatar
                     displayName={project.displayName}
                     projectType={project.type}
-                    iconColor={project.icon.color}
+                    iconColor={currentIconColor}
                     size="md"
                     showBackground={true}
                   />

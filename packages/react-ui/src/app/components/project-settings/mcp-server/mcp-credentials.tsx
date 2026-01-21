@@ -32,7 +32,7 @@ export function McpCredentials({ mcpServer }: McpCredentialsProps) {
 
   const jsonConfiguration = {
     mcpServers: {
-      activepieces: {
+      automationx: {
         url: serverUrl,
         headers: {
           Authorization: `Bearer ${mcpServer?.token ?? ''}`,
