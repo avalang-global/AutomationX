@@ -1,4 +1,5 @@
-import { assertNotNullOrUndefined, EndpointScope, ListTagsRequest, PrincipalType, SeekPage, SetPieceTagsRequest, Tag, UpsertTagRequest } from '@activepieces/shared'
+import { securityAccess } from '@activepieces/server-shared'
+import { assertNotNullOrUndefined, ListTagsRequest, PrincipalType, SeekPage, SetPieceTagsRequest, Tag, UpsertTagRequest } from '@activepieces/shared'
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { StatusCodes } from 'http-status-codes'
 import { pieceTagService } from './pieces/piece-tag.service'
@@ -6,7 +7,6 @@ import { tagService } from './tag-service'
 
 
 export const tagsModule: FastifyPluginAsyncTypebox = async (app) => {
-    // app.addHook('preHandler', platformMustBeOwnedByCurrentUser)
     await app.register(tagsController, { prefix: '/v1/tags' })
 }
 
@@ -41,8 +41,7 @@ const tagsController: FastifyPluginAsyncTypebox = async (fastify) => {
 
 const UpsertTagParams = {
     config: {
-        allowedPrincipals: [PrincipalType.USER] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.platformAdminOnly([PrincipalType.USER]),
     },
     schema: {
         body: UpsertTagRequest,
@@ -54,8 +53,7 @@ const UpsertTagParams = {
 
 const setPiecesTagsParams = {
     config: {
-        allowedPrincipals: [PrincipalType.USER, PrincipalType.SERVICE] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.platformAdminOnly([PrincipalType.USER, PrincipalType.SERVICE]),
     },
     schema: {
         body: SetPieceTagsRequest,
@@ -67,8 +65,7 @@ const setPiecesTagsParams = {
 
 const ListTagsParams = {
     config: {
-        allowedPrincipals: [PrincipalType.USER] as const,
-        scope: EndpointScope.PLATFORM,
+        security: securityAccess.platformAdminOnly([PrincipalType.USER]),
     },
     schema: {
         querystring: ListTagsRequest,

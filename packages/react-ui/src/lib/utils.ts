@@ -5,6 +5,7 @@ import i18next, { t } from 'i18next';
 import JSZip from 'jszip';
 import { useEffect, useRef, useState, RefObject } from 'react';
 import { twMerge } from 'tailwind-merge';
+import { useDebouncedCallback } from 'use-debounce';
 
 import { LocalesEnum, Permission } from '@activepieces/shared';
 
@@ -233,11 +234,12 @@ export const localesMap = {
 
 export const useElementSize = (ref: RefObject<HTMLElement>) => {
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const debouncedSetSize = useDebouncedCallback(setSize, 150);
   useEffect(() => {
     const handleResize = (entries: ResizeObserverEntry[]) => {
       if (entries[0]) {
         const { width, height } = entries[0].contentRect;
-        setSize({ width, height });
+        debouncedSetSize({ width, height });
       }
     };
 
@@ -308,7 +310,6 @@ export const determineDefaultRoute = (
 export const NEW_FLOW_QUERY_PARAM = 'newFlow';
 export const NEW_FLOW_WITH_AI_QUERY_PARAM = 'newFlowWithAI';
 export const NEW_TABLE_QUERY_PARAM = 'newTable';
-export const NEW_MCP_QUERY_PARAM = 'newMcp';
 export const parentWindow: Window = window.opener ?? window.parent;
 export const cleanLeadingSlash = (url: string) => {
   return url.startsWith('/') ? url.slice(1) : url;
@@ -402,4 +403,8 @@ export const routesThatRequireProjectId = {
   settings: '/settings',
   releases: '/releases',
   singleRelease: '/releases/:releaseId',
+};
+
+export const isMac = () => {
+  return /(Mac)/i.test(navigator.userAgent);
 };

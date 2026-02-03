@@ -1,18 +1,8 @@
+// Custom
 import { Static, Type } from '@sinclair/typebox'
 import { Metadata, Nullable, SAFE_STRING_PATTERN } from '../common'
 import { PiecesFilterType, ProjectIcon, ProjectType } from './project'
 
-
-export const ListProjectRequestForUserQueryParams = Type.Object({
-    cursor: Type.Optional(Type.String()),
-    limit: Type.Optional(Type.Number()),
-    displayName: Type.Optional(Type.String()),
-    types: Type.Optional(Type.Array(Type.Enum(ProjectType))),
-})
-
-export type ListProjectRequestForUserQueryParams = Static<typeof ListProjectRequestForUserQueryParams>
-
-// Custom
 export const UpdateProjectPlatformRequest = Type.Object({
     releasesEnabled: Type.Optional(Type.Boolean()),
     displayName: Type.Optional(Type.String({

@@ -16,7 +16,8 @@
 // } from '@activepieces/ee-shared'
 import { LATEST_CONTEXT_VERSION } from '@activepieces/pieces-framework'
 import { apDayjs } from '@activepieces/server-shared'
-import { AiOverageState,
+import {
+    AiCreditsAutoTopUpState,
     AIProvider,
     AIProviderName,
     apId,
@@ -149,7 +150,6 @@ export const createMockTemplate = (
         tags: template?.tags ?? [],
         blogUrl: template?.blogUrl ?? faker.internet.url(),
         metadata: template?.metadata ?? null,
-        usageCount: template?.usageCount ?? 0,
         author: template?.author ?? faker.person.fullName(),
         categories: template?.categories ?? [],
         status: template?.status ?? TemplateStatus.PUBLISHED,
@@ -231,8 +231,7 @@ export const createMockPlatformPlan = (platformPlan?: Partial<PlatformPlan>): Pl
         stripeSubscriptionId: undefined,
         ssoEnabled: platformPlan?.ssoEnabled ?? false,
         agentsEnabled: platformPlan?.agentsEnabled ?? false,
-        aiCreditsOverageLimit: platformPlan?.aiCreditsOverageLimit ?? 0,
-        aiCreditsOverageState: platformPlan?.aiCreditsOverageState ?? AiOverageState.ALLOWED_BUT_OFF,
+        aiCreditsAutoTopUpState: AiCreditsAutoTopUpState.DISABLED,
         environmentsEnabled: platformPlan?.environmentsEnabled ?? false,
         analyticsEnabled: platformPlan?.analyticsEnabled ?? false,
         auditLogEnabled: platformPlan?.auditLogEnabled ?? false,
@@ -530,6 +529,7 @@ export const createMockFlowVersion = (
         state: flowVersion?.state ?? faker.helpers.enumValue(FlowVersionState),
         updatedBy: flowVersion?.updatedBy,
         valid: flowVersion?.valid ?? faker.datatype.boolean(),
+        notes: flowVersion?.notes ?? [],
     }
 }
 
@@ -777,10 +777,12 @@ export const createMockAIProvider = async (aiProvider?: Partial<AIProvider>): Pr
         platformId: aiProvider?.platformId ?? apId(),
         provider: aiProvider?.provider ?? faker.helpers.enumValue(AIProviderName),
         displayName: aiProvider?.displayName ?? faker.lorem.word(),
-        config: await encryptUtils.encryptObject({
-            apiKey: aiProvider?.config?.apiKey ?? process.env.OPENAI_API_KEY ?? faker.string.uuid(),
+        auth: await encryptUtils.encryptObject({
+            apiKey: process.env.OPENAI_API_KEY ?? faker.string.uuid(),
         }),
+        config: {},
     }
+    
 }
 
 export const mockAndSaveAIProvider = async (params?: Partial<AIProvider>): Promise<Omit<AIProviderSchema, 'platform'>> => {
@@ -788,7 +790,6 @@ export const mockAndSaveAIProvider = async (params?: Partial<AIProvider>): Promi
     await databaseConnection().getRepository('ai_provider').upsert(mockAIProvider, ['platformId', 'provider'])
     return mockAIProvider
 }
-
 
 type CreateMockPlatformWithOwnerParams = {
     platform?: Partial<Omit<Platform, 'ownerId'>>

@@ -109,6 +109,7 @@ async function getProjectIds(platformId: string, userId: string): Promise<string
     const result = await projectService.getAllForUser({
         platformId,
         userId,
+        isPrivileged: true,
     })
     const projectIds = result
         .map(project => project.id)

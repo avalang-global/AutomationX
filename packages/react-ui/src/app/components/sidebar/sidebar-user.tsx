@@ -115,7 +115,7 @@ export function SidebarUser() {
                     disableTooltip={true}
                   />
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">
+                    <span className="truncate">
                       {user.firstName + ' ' + user.lastName}
                     </span>
                   </div>
@@ -140,7 +140,7 @@ export function SidebarUser() {
                 />
 
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">
+                  <span className="truncate font-medium">
                     {user.firstName + ' ' + user.lastName}
                   </span>
                   <span className="truncate text-xs">{user.email}</span>
@@ -193,7 +193,7 @@ function SidebarPlatformAdminButton() {
   return (
     <DropdownMenuGroup>
       <DropdownMenuItem
-        onClick={() => navigate('/platform')}
+        onClick={() => navigate('/platform/projects')}
         className="w-full flex items-center justify-center relative"
       >
         <div className={`w-full flex items-center gap-2`}>

@@ -1,14 +1,19 @@
-import { ActivepiecesError, apId, CreateTemplateRequestBody, ErrorCode, flowPieceUtil, FlowVersionTemplate, isNil, ListTemplatesRequestQuery, sanitizeObjectForPostgresql, SeekPage, spreadIfDefined, Template, TemplateStatus, TemplateType, UpdateTemplateRequestBody } from '@activepieces/shared'
-import { ArrayContains, ArrayOverlap, Equal, ILike, IsNull } from 'typeorm'
+import { ActivepiecesError, apId, CreateTemplateRequestBody, ErrorCode, FlowVersionTemplate, isNil, ListTemplatesRequestQuery, SeekPage, spreadIfDefined, Template, TemplateStatus, TemplateType, UpdateTemplateRequestBody } from '@activepieces/shared'
+import { FastifyBaseLogger } from 'fastify'
+import { ArrayContains, ArrayOverlap, Equal, IsNull } from 'typeorm'
 import { repoFactory } from '../core/db/repo-factory'
 // import { platformTemplateService } from '../ee/template/platform-template.service'
 import { paginationHelper } from '../helper/pagination/pagination-utils'
 import { platformTemplateService } from './platform-template.service'
+import { templateValidator } from './template-validator'
 import { TemplateEntity } from './template.entity'
 
 const templateRepo = repoFactory<Template>(TemplateEntity)
 
-export const templateService = () => ({
+export const templateService = (log: FastifyBaseLogger) => ({
+    async getOne({ id }: GetParams): Promise<Template | null> {
+        return templateRepo().findOneBy({ id })
+    },
     async getOneOrThrow({ id }: GetParams): Promise<Template> {
         const template = await templateRepo().findOneBy({ id })
         if (isNil(template)) {
@@ -24,10 +29,16 @@ export const templateService = () => ({
         return template
     },
     async create({ platformId, params }: CreateParams): Promise<Template> {
+        const preparedTemplate = await templateValidator.validateAndPrepare({
+            flows: params.flows,
+            platformId,
+            log,
+        })
+
+        const { flows, pieces } = preparedTemplate
         const { name, summary, description, tags, blogUrl, metadata, author, categories, type } = params
+
         const newTags = tags ?? []
-        const sanatizedFlows: FlowVersionTemplate[] = params.flows?.map((flow) => sanitizeObjectForPostgresql(flow)) ?? []
-        const pieces = sanatizedFlows.map((flow) => flowPieceUtil.getUsedPieces(flow.trigger)).flat()
 
         switch (type) {
             case TemplateType.OFFICIAL:
@@ -43,27 +54,37 @@ export const templateService = () => ({
                     blogUrl,
                     metadata,
                     author,
-                    usageCount: 0,
                     categories,
                     pieces,
-                    flows: sanatizedFlows,
+                    flows,
                     status: TemplateStatus.PUBLISHED,
                 }
                 return templateRepo().save(newTemplate)
             }
             case TemplateType.CUSTOM: {
-                return platformTemplateService().create({ platformId, name, summary, description, pieces, tags: newTags, blogUrl, metadata, author, categories, flows: sanatizedFlows })
+                return platformTemplateService().create({ platformId, name, summary, description, pieces, tags: newTags, blogUrl, metadata, author, categories, flows })
             }
         }
     },
 
     async update({ id, params }: UpdateParams): Promise<Template> {
         const { name, summary, description, tags, blogUrl, metadata, categories, status } = params
-        const template = await templateService().getOneOrThrow({ id })
+        const template = await this.getOneOrThrow({ id })
 
         const newTags = tags ?? []
-        const sanatizedFlows: FlowVersionTemplate[] = params.flows?.map((flow) => sanitizeObjectForPostgresql(flow)) ?? []
-        const pieces = sanatizedFlows.map((flow) => flowPieceUtil.getUsedPieces(flow.trigger)).flat()
+
+        let sanatizedFlows: FlowVersionTemplate[] | undefined = undefined
+        let pieces: string[] | undefined = undefined
+        if (!isNil(params.flows) && params.flows.length > 0) {
+            const preparedTemplate = await templateValidator.validateAndPrepare({
+                flows: params.flows,
+                platformId: undefined,
+                log,
+            })
+            sanatizedFlows = preparedTemplate.flows
+            pieces = preparedTemplate.pieces
+        }
+
         switch (template.type) {
             case TemplateType.OFFICIAL:
             case TemplateType.SHARED: {
@@ -88,26 +109,16 @@ export const templateService = () => ({
         }
     },
 
-    async incrementUsageCount({ id }: IncrementUsageCountParams): Promise<void> {
-        await templateRepo().increment({ id }, 'usageCount', 1)
-    },
-
-    async list({ platformId, requestQuery }: ListParams): Promise<SeekPage<Template>> {
-        const { pieces, tags, search, type } = requestQuery
+    async list({ platformId, pieces, tags, search, type, category }: ListParams): Promise<SeekPage<Template>> {
         const commonFilters: Record<string, unknown> = {}
-        const typeFilter = type ?? TemplateType.OFFICIAL
 
         if (pieces) {
             commonFilters.pieces = ArrayOverlap(pieces)
         }
-        if (tags) {
-            commonFilters.tags = ArrayContains(tags)
+        if (category) {
+            commonFilters.categories = ArrayContains([category])
         }
-        if (search) {
-            commonFilters.name = ILike(`%${search}%`)
-            commonFilters.description = ILike(`%${search}%`)
-        }
-        switch (typeFilter) {
+        switch (type) {
             case TemplateType.OFFICIAL:
                 commonFilters.type = Equal(TemplateType.OFFICIAL)
                 commonFilters.platformId = IsNull()
@@ -133,10 +144,24 @@ export const templateService = () => ({
                 })
         }
         commonFilters.status = Equal(TemplateStatus.PUBLISHED)
-        const templates = await templateRepo()
+        const queryBuilder = templateRepo()
             .createQueryBuilder('template')
             .where(commonFilters)
-            .getMany()
+
+        if (tags && tags.length > 0) {
+            queryBuilder.andWhere(
+                '(SELECT array_agg(tag->>\'title\') FROM jsonb_array_elements(template.tags) tag) @> :tags::text[]',
+                { tags },
+            )
+        }
+        if (search) {
+            queryBuilder.andWhere(
+                '(template.name ILIKE :search OR template.summary ILIKE :search OR template.description ILIKE :search)',
+                { search: `%${search}%` },
+            )
+        }
+
+        const templates = await queryBuilder.getMany()
         return paginationHelper.createPage(templates, null)
     },
 
@@ -156,9 +181,9 @@ type CreateParams = {
 
 type NewTemplate = Omit<Template, 'created' | 'updated'>
 
-type ListParams = {
+type ListParams = Omit<ListTemplatesRequestQuery, 'type'> & {
     platformId: string | null
-    requestQuery: ListTemplatesRequestQuery
+    type: TemplateType
 }
 
 type DeleteParams = {
@@ -168,8 +193,4 @@ type DeleteParams = {
 type UpdateParams = {
     id: string
     params: UpdateTemplateRequestBody
-}
-
-type IncrementUsageCountParams = {
-    id: string
 }

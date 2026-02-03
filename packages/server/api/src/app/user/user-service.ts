@@ -16,18 +16,22 @@ import {
     UserId,
     UserIdentity,
     UserStatus,
-    UserWithMetaInformation } from '@activepieces/shared'
+    UserWithBadges,
+    UserWithMetaInformation,
+} from '@activepieces/shared'
 import dayjs from 'dayjs'
 import { In } from 'typeorm'
 import { userIdentityService } from '../authentication/user-identity/user-identity-service'
 import { repoFactory } from '../core/db/repo-factory'
+// import { platformProjectService } from '../ee/projects/platform-project-service'
 // import { projectMemberRepo } from '../ee/projects/project-role/project-role.service'
 import { buildPaginator } from '../helper/pagination/build-paginator'
 import { paginationHelper } from '../helper/pagination/pagination-utils'
 import { system } from '../helper/system/system'
 import { platformService } from '../platform/platform.service'
-import { projectMemberRepo } from '../project-member/project-member.service'
+import { platformProjectService } from '../project/platform/platform-project.service'
 import { projectService } from '../project/project-service'
+import { projectMemberRepo } from '../project-member/project-member.service'
 import { UserEntity, UserSchema } from './user-entity'
 
 
@@ -148,7 +152,29 @@ export const userService = {
     async getOneOrFail({ id }: IdParams): Promise<User> {
         return userRepo().findOneOrFail({ where: { id } })
     },
+    async getOneByIdAndPlatformIdOrThrow({ id, platformId }: GetOneByIdAndPlatformIdParams): Promise<UserWithBadges> {
+        const user = await userRepo().findOne({ where: { id, platformId }, relations: { badges: true } })
+        if (isNil(user)) {
+            throw new ActivepiecesError({
+                code: ErrorCode.ENTITY_NOT_FOUND,
+                params: { entityType: 'user', entityId: id },
+            })
+        }
+        const meta = await this.getMetaInformation({ id })
+        return {
+            ...meta,
+            badges: user.badges.map((badge) => ({
+                name: badge.name,
+                created: badge.created,
+            })),
+        }
+    },
     async delete({ id, platformId }: DeleteParams): Promise<void> {
+
+        await platformProjectService(system.globalLogger()).deletePersonalProjectForUser({
+            userId: id,
+            platformId,
+        })
         await userRepo().delete({
             id,
             platformId,
@@ -202,6 +228,10 @@ export const userService = {
             platformId,
         })
     },
+
+    isUserPrivileged(user: User): boolean {
+        return user.platformRole === PlatformRole.ADMIN || user.platformRole === PlatformRole.OPERATOR
+    },
 }
 
 
@@ -223,6 +253,10 @@ type UpdateLastActiveDateParams = {
     id: UserId
 }
 
+type GetOneByIdAndPlatformIdParams = {
+    id: UserId
+    platformId: PlatformId
+}
 type ListUsersForProjectParams = {
     projectId: ProjectId
     platformId: PlatformId

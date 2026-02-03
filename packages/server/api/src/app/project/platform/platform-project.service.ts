@@ -4,51 +4,79 @@ The logic has been isolated to this file to avoid potential conflicts with the o
 */
 
 import {
-    ActivepiecesError, assertNotNullOrUndefined,
     Cursor,
-    EndpointScope,
-    ErrorCode,
-    FlowStatus, Metadata, PiecesFilterType, PlatformId,
+    isNil,
+    PiecesFilterType,
+    PlatformId,
     Project,
-    ProjectId, ProjectType, ProjectWithLimits, SeekPage,
+    ProjectId, ProjectPlan, ProjectType, ProjectWithLimits, SeekPage,
     spreadIfDefined,
-    UserStatus,
+    UpdateProjectPlatformRequest,
+    UserId,
 } from '@activepieces/shared'
 import { FastifyBaseLogger } from 'fastify'
 import { Equal, ILike, In, IsNull } from 'typeorm'
 import { appConnectionService } from '../../app-connection/app-connection-service/app-connection-service'
 import { repoFactory } from '../../core/db/repo-factory'
+import { transaction } from '../../core/db/transaction'
+import { flowRepo } from '../../flows/flow/flow.repo'
 import { flowService } from '../../flows/flow/flow.service'
 import { buildPaginator } from '../../helper/pagination/build-paginator'
 import { paginationHelper } from '../../helper/pagination/pagination-utils'
+import { Order } from '../../helper/pagination/paginator'
 import { ProjectEntity } from '../../project/project-entity'
-import { projectService } from '../../project/project-service'
-import { projectMemberRepo } from '../../project-member/project-member.service'
-import { userService } from '../../user/user-service'
+import { applyProjectsAccessFilters, projectService } from '../../project/project-service'
+
+const getDefaultProjectPlan = (project: Project): ProjectPlan => ({
+    projectId: project.id,
+    locked: false,
+    name: `${project.displayName} Plan`,
+    piecesFilterType: PiecesFilterType.NONE,
+    pieces: [],
+    id: project.id,
+    created: project.created,
+    updated: project.updated,
+})
+
 
 const projectRepo = repoFactory(ProjectEntity)
 
 export const platformProjectService = (log: FastifyBaseLogger) => ({
-    async getAllForPlatform(params: GetAllForParamsAndUser): Promise<SeekPage<ProjectWithLimits>> {
-        const user = await userService.getOneOrFail({ id: params.userId })
+    async getForPlatform(params: GetAllForParamsAndUser): Promise<SeekPage<ProjectWithLimits>> {
+        const { cursorRequest, limit, platformId, displayName, externalId, userId, types, isPrivileged } = params
 
-        assertNotNullOrUndefined(user.platformId, 'User does not have a platform set')
-
-        const projects = await projectService.getAllForUser({
-            platformId: params.platformId,
-            userId: params.userId,
-            displayName: params.displayName,
-            scope: params.scope,
+        const decodedCursor = paginationHelper.decodeCursor(cursorRequest)
+        const paginator = buildPaginator({
+            entity: ProjectEntity,
+            query: {
+                limit,
+                afterCursor: decodedCursor.nextCursor,
+                beforeCursor: decodedCursor.previousCursor,
+                orderBy: [
+                    { field: 'type', order: Order.ASC },
+                    { field: 'displayName', order: Order.ASC },
+                    { field: 'id', order: Order.ASC },
+                ],
+            },
         })
 
-        return getProjects({ ...params, projectIds: projects.map((project) => project.id) }, log)
-    },
-
-    async getWithPlanAndUsageOrThrow(projectId: string): Promise<Project> {
-        return projectRepo().findOneByOrFail({
-            id: projectId,
+        const filters = {
+            platformId: Equal(platformId),
+            ...spreadIfDefined('displayName', displayName ? ILike(`%${displayName}%`) : undefined),
+            ...spreadIfDefined('externalId', externalId),
+            ...(types && types.length > 0 ? { type: In(types) } : {}),
             deleted: IsNull(),
-        })
+        }
+
+        const queryBuilder = projectRepo()
+            .createQueryBuilder('project')
+            .where(filters)
+
+        await applyProjectsAccessFilters(queryBuilder, { platformId, userId, isPrivileged })
+
+        const { data, cursor } = await paginator.paginate(queryBuilder)
+        const projects: ProjectWithLimits[] = await enrichProjects(data, log)
+        return paginationHelper.createPage<ProjectWithLimits>(projects, cursor)
     },
 
     async update({ projectId, request }: UpdateParams): Promise<ProjectWithLimits> {
@@ -57,145 +85,101 @@ export const platformProjectService = (log: FastifyBaseLogger) => ({
             type: project.type,
             ...request,
         })
-        return enrichProject(project, log)
+        return this.getWithPlanAndUsageOrThrow(projectId)
+    },
+    async getWithPlanAndUsageOrThrow(
+        projectId: string,
+    ): Promise<ProjectWithLimits> {
+        const project = await projectRepo().findOneByOrFail({
+            id: projectId,
+        })
+        return (await enrichProjects([project], log))[0]
+    },
+    async deletePersonalProjectForUser({ userId, platformId }: DeletePersonalProjectForUserParams): Promise<void> {
+        const personalProject = await projectRepo().findOneBy({
+            platformId,
+            ownerId: userId,
+            type: ProjectType.PERSONAL,
+        })
+        if (!isNil(personalProject)) {
+            await this.hardDelete({ id: personalProject.id, platformId })
+        }
     },
 
-    async hardDelete({ id }: HardDeleteParams): Promise<void> {
-        await assertAllProjectFlowsAreDisabled({ projectId: id }, log)
-        await projectRepo().delete({ id })
-        await appConnectionService(log).deleteAllProjectConnections(id)
+    async hardDelete({ id, platformId }: HardDeleteParams): Promise<void> {
+        await transaction(async (entityManager) => {
+            const allFlows = await flowRepo(entityManager).find({
+                where: {
+                    projectId: id,
+                },
+                select: {
+                    id: true,
+                },
+            })
+            await Promise.all(allFlows.map((flow) => flowService(log).delete({ id: flow.id, projectId: id })))
+            await appConnectionService(log).deleteAllProjectConnections(id)
+            await projectRepo(entityManager).delete({
+                id,
+                platformId,
+            })
+        })
+
     },
 })
 
-async function getProjects(params: GetAllParams & { projectIds?: string[] }, log: FastifyBaseLogger): Promise<SeekPage<ProjectWithLimits>> {
-    const { cursorRequest, limit, platformId, displayName, externalId, projectIds, types } = params
-    const decodedCursor = paginationHelper.decodeCursor(cursorRequest)
-    const paginator = buildPaginator({
-        entity: ProjectEntity,
-        query: {
-            limit,
-            order: 'ASC',
-            afterCursor: decodedCursor.nextCursor,
-            beforeCursor: decodedCursor.previousCursor,
-        },
+export async function enrichProjects(
+    projects: Project[],
+    log: FastifyBaseLogger,
+): Promise<ProjectWithLimits[]> {
+    if (projects.length === 0) return []
+
+    const projectIds = projects.map(p => p.id)
+
+    const [totalUsersMap, activeUsersMap, totalFlowsMap, activeFlowsMap] = await Promise.all([
+        new Map(),
+        new Map(),
+        flowService(log).countFlowsByProjects(projectIds),
+        flowService(log).countActiveFlowsByProjects(projectIds),
+    ])
+
+    return projects.map(project => {
+        return {
+            ...project,
+            plan: getDefaultProjectPlan(project),
+            analytics: {
+                activeFlows: activeFlowsMap.get(project.id) ?? 0,
+                totalFlows: totalFlowsMap.get(project.id) ?? 0,
+                totalUsers: totalUsersMap.get(project.id) ?? 0,
+                activeUsers: activeUsersMap.get(project.id) ?? 0,
+            },
+        }
     })
-    const displayNameFilter = displayName ? ILike(`%${displayName}%`) : undefined
-    const filters = {
-        platformId: Equal(platformId),
-        deleted: IsNull(),
-        ...spreadIfDefined('externalId', externalId),
-        ...spreadIfDefined('displayName', displayNameFilter),
-        ...(projectIds ? { id: In(projectIds) } : {}),
-        ...(types ? { type: In(types) } : {}),
-    }
-
-    const queryBuilder = projectRepo()
-        .createQueryBuilder('project')
-        .where(filters)
-
-    const { data, cursor } = await paginator.paginate(queryBuilder)
-
-    const projects: ProjectWithLimits[] = await Promise.all(
-        data.map((project) => enrichProject(project, log)),
-    )
-
-    return paginationHelper.createPage<ProjectWithLimits>(projects, cursor)
 }
+
 
 type GetAllForParamsAndUser = {
     userId: string
-    scope?: EndpointScope
-} & GetAllParams
-
-type GetAllParams = {
     platformId: string
     displayName?: string
     externalId?: string
     cursorRequest: Cursor | null
     limit: number
     types?: ProjectType[]
+    isPrivileged: boolean
 }
 
-export async function enrichProject(project: Project, log: FastifyBaseLogger): Promise<ProjectWithLimits> {
-    const totalUsers = await projectMemberRepo().countBy({
-        projectId: project.id,
-    })
-    const activeUsers = await projectMemberRepo()
-        .createQueryBuilder('project_member')
-        .leftJoin('user', 'user', 'user.id = project_member."userId"')
-        .groupBy('user.id')
-        .where('user.status = :activeStatus and project_member."projectId" = :projectId', {
-            activeStatus: UserStatus.ACTIVE,
-            projectId: project.id,
-        })
-        .getCount()
-
-    const totalFlows = await flowService(log).count({
-        projectId: project.id,
-    })
-
-    const activeFlows = await flowService(log).count({
-        projectId: project.id,
-        status: FlowStatus.ENABLED,
-    })
-
-    // todo(Rupal): Dummy plan
-    return {
-        ...project,
-        plan: {
-            id: project.id,
-            projectId: project.id,
-            created: project.created,
-            updated: project.updated,
-            locked: false,
-            name: 'Default Plan',
-            piecesFilterType: PiecesFilterType.ALLOWED,
-            pieces: [],
-        },
-        analytics: {
-            activeFlows,
-            totalFlows,
-            totalUsers,
-            activeUsers,
-        },
-    }
-}
-
-const assertAllProjectFlowsAreDisabled = async (params: AssertAllProjectFlowsAreDisabledParams, log: FastifyBaseLogger): Promise<void> => {
-    const { projectId } = params
-
-    const projectHasEnabledFlows = await flowService(log).existsByProjectAndStatus({
-        projectId,
-        status: FlowStatus.ENABLED,
-    })
-
-    if (projectHasEnabledFlows) {
-        throw new ActivepiecesError({
-            code: ErrorCode.VALIDATION,
-            params: {
-                message: 'PROJECT_HAS_ENABLED_FLOWS',
-            },
-        })
-    }
+type DeletePersonalProjectForUserParams = {
+    userId: UserId
+    platformId: PlatformId
 }
 
 type UpdateParams = {
     projectId: ProjectId
-    request: UpdateProjectRequestParams
+    request: UpdateProjectPlatformRequest
     platformId?: PlatformId
-}
-
-type UpdateProjectRequestParams = {
-    displayName?: string
-    externalId?: string
-    releasesEnabled?: boolean
-    metadata?: Metadata
-}
-
-type AssertAllProjectFlowsAreDisabledParams = {
-    projectId: ProjectId
 }
 
 type HardDeleteParams = {
     id: ProjectId
+    platformId: PlatformId
 }

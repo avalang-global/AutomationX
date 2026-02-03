@@ -32,7 +32,11 @@ export const smtpEmailSender = (log: FastifyBaseLogger): SMTPEmailSender => {
             })
 
             const smtpClient = initSmtpClient()
-
+            log.info({
+                emails,
+                platformId,
+                templateData,
+            }, '[smtpEmailSender#send] sending email')
             await smtpClient.sendMail({
                 from: `${senderName} <${senderEmail}>`,
                 to: emails.join(','),

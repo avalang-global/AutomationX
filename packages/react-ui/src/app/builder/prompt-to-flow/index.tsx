@@ -1,13 +1,17 @@
 // Custom
+import {
+  BuilderMessage,
+  BuilderMessageRole,
+} from '@activepieces/shared';
 import { useMutation } from '@tanstack/react-query';
 import { t } from 'i18next';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+import { useBuilderStateContext } from '../builder-hooks';
 import { CardList } from '@/components/custom/card-list';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
-import { LeftSideBarType, useBuilderStateContext } from '../builder-hooks';
 import { SidebarHeader } from '../sidebar-header';
 
 import { ChatMessage } from './chat-message';
@@ -18,12 +22,10 @@ import {
 } from '@/features/flows/lib/prompt-to-flow-api';
 
 import { flowsApi } from '@/features/flows/lib/flows-api';
-import {
-  BuilderMessage,
-  BuilderMessageRole,
-} from '@activepieces/shared';
 import { AssistantContent } from 'ai';
 import { toast } from 'sonner';
+
+import { RightSideBarType } from '@/lib/types';
 
 const WELCOME_MESSAGE =
   "Hello! How can I help you today?\nYou can type the changes you'd like for this flow, and I'll help you create or modify it";
@@ -36,10 +38,10 @@ export const PromptToFlowSidebar = ({
   const [isShowWelcomeMessage, setIsShowWelcomeMessage] = useState(false);
   const [messages, setMessages] = useState<PromptMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
-  const [flow, setLeftSidebar, setFlow, setVersion] = useBuilderStateContext(
+  const [flow, setRightSidebar, setFlow, setVersion] = useBuilderStateContext(
     (state) => [
       state.flow,
-      state.setLeftSidebar,
+      state.setRightSidebar,
       state.setFlow,
       state.setVersion,
     ]
@@ -57,7 +59,7 @@ export const PromptToFlowSidebar = ({
   };
 
   const mapBuilderToPromptMessages = (
-    builderMessages: BuilderMessage[]
+    builderMessages: BuilderMessage[],
   ): PromptMessage[] => {
     const mappedMessages = builderMessages.map((m) => {
       try {
@@ -118,11 +120,13 @@ export const PromptToFlowSidebar = ({
         scrollToLastMessage();
         const freshFlow = await flowsApi.get(flow.id);
         setFlow(freshFlow);
-        setVersion(freshFlow.version, true);
+        // todo(Rupal): check why second boolean argument was needed
+        // setVersion(freshFlow.version, true);
+        setVersion(freshFlow.version);
       } catch (e) {
         console.error(
           'Failed to reload messages or flow after chat response',
-          e
+          e,
         );
       }
     },
@@ -167,7 +171,7 @@ export const PromptToFlowSidebar = ({
   };
 
   const handleCloseSidebar = () => {
-    setLeftSidebar(LeftSideBarType.NONE);
+    setRightSidebar(RightSideBarType.NONE);
   };
 
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -200,8 +204,8 @@ export const PromptToFlowSidebar = ({
     <div className="relative h-full">
       <div className="absolute top-0 bottom-0 flex flex-col">
         <SidebarHeader onClose={handleCloseSidebar}>AutomationX</SidebarHeader>
-        <div className="pt-0 p-4 flex flex-col flex-grow overflow-hidden">
-          <ScrollArea className="flex-grow overflow-auto">
+        <div className="pt-0 p-4 flex flex-col grow overflow-hidden">
+          <ScrollArea className="grow overflow-auto">
             <CardList className="pb-3 pr-3" listClassName="gap-6">
               {isShowWelcomeMessage && <ChatMessage message={welcomeMessage} />}
               {messages.map((message, index) => (
