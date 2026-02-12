@@ -3,7 +3,7 @@ import { createAction, Property } from '@activepieces/pieces-framework';
 import { baseUrl, tiktokAuth } from '../common';
 
 export const postPhotos = createAction({
-  name: 'postPhotos',
+  name: 'post_photos',
   displayName: 'Post Photos',
   description: 'Post photos to TikTok',
   props: {
@@ -17,12 +17,12 @@ export const postPhotos = createAction({
       description: 'Description or caption of the post',
       required: true,
     }),
-    disable_comment: Property.Checkbox({
+    disableComment: Property.Checkbox({
       displayName: 'Disable Comments',
       description: 'Should comments be disabled on this post?',
       required: false,
     }),
-    privacy_level: Property.StaticDropdown({
+    privacyLevel: Property.StaticDropdown({
       displayName: 'Privacy Level',
       description: 'Privacy level of the post',
       required: true,
@@ -34,22 +34,22 @@ export const postPhotos = createAction({
         ],
       },
     }),
-    auto_add_music: Property.Checkbox({
+    autoAddMusic: Property.Checkbox({
       displayName: 'Auto Add Music',
       description: 'Automatically add music to the post',
       required: false,
     }),
-    photo_cover_index: Property.Number({
+    photoCoverIndex: Property.Number({
       displayName: 'Photo Cover Index',
       description: 'Index of the photo to use as cover (1-based)',
       required: false,
     }),
-    photo_images: Property.Array({
+    photoImages: Property.Array({
       displayName: 'Photo URLs',
       description: 'Array of photo URLs to post',
       required: true,
     }),
-    post_mode: Property.StaticDropdown({
+    postMode: Property.StaticDropdown({
       displayName: 'Post Mode',
       description: 'How to post the content',
       required: true,
@@ -64,6 +64,17 @@ export const postPhotos = createAction({
   },
   auth: tiktokAuth,
   async run(context) {
+    const { 
+      title, 
+      description, 
+      disableComment, 
+      privacyLevel, 
+      autoAddMusic, 
+      photoCoverIndex, 
+      photoImages, 
+      postMode 
+    } = context.propsValue;
+
     const res = await httpClient.sendRequest({
       method: HttpMethod.POST,
       url: `${baseUrl}/post/publish/content/init/`,
@@ -73,18 +84,18 @@ export const postPhotos = createAction({
       },
       body: {
         post_info: {
-          title: context.propsValue.title,
-          description: context.propsValue.description,
-          disable_comment: context.propsValue.disable_comment ?? false,
-          privacy_level: context.propsValue.privacy_level,
-          auto_add_music: context.propsValue.auto_add_music ?? false,
+          title: title,
+          description: description,
+          disable_comment: disableComment ?? false,
+          privacy_level: privacyLevel,
+          auto_add_music: autoAddMusic ?? false,
         },
         source_info: {
           source: 'PULL_FROM_URL',
-          photo_cover_index: context.propsValue.photo_cover_index ?? 1,
-          photo_images: context.propsValue.photo_images,
+          photo_cover_index: photoCoverIndex ?? 1,
+          photo_images: photoImages,
         },
-        post_mode: context.propsValue.post_mode,
+        post_mode: postMode,
         media_type: 'PHOTO',
       },
     });
