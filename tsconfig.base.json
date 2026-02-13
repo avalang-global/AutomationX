@@ -17,9 +17,6 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      // "@activepieces/ee-auth": ["packages/ee/auth/src/index.ts"],
-      // "@activepieces/ee-shared": ["packages/ee/shared/src/index.ts"],
-      // "@activepieces/ee/billing/ui": ["packages/ee/billing/ui/src/index.ts"],
       "@activepieces/engine": ["packages/engine/src/main.ts"],
       "@activepieces/pieces-common": [
         "packages/pieces/community/common/src/index.ts"
@@ -345,6 +342,9 @@
       ],
       "@activepieces/piece-metatext": [
         "packages/pieces/community/metatext/src/index.ts"
+      ],
+      "@activepieces/piece-promptx-tiktok": [
+        "packages/pieces/community/promptx-tiktok/src/index.ts"
       ]
     },
     "resolveJsonModule": true
