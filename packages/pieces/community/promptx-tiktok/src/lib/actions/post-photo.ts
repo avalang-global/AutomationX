@@ -64,15 +64,15 @@ export const postPhotos = createAction({
   },
   auth: tiktokAuth,
   async run(context) {
-    const { 
-      title, 
-      description, 
-      disableComment, 
-      privacyLevel, 
-      autoAddMusic, 
-      photoCoverIndex, 
-      photoImages, 
-      postMode 
+    const {
+      title,
+      description,
+      disableComment,
+      privacyLevel,
+      autoAddMusic,
+      photoCoverIndex,
+      photoImages,
+      postMode,
     } = context.propsValue;
 
     const res = await httpClient.sendRequest({
