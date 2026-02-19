@@ -17,10 +17,16 @@ export const fetchConversationsAction = createAction({
     }),
   },
   async run({ auth, propsValue }) {
-    const promptXAuth = auth as PromptXAuthType;
-    const agentXToken = await getAgentXToken(promptXAuth);
+    const pxAuth: PromptXAuthType = {
+      username: auth.props.username,
+      password: auth.props.password,
+      server: auth.props.server,
+      customAuthUrl: auth.props.customAuthUrl,
+      customAppUrl: auth.props.customAppUrl,
+    }
+    const agentXToken = await getAgentXToken(pxAuth);
     const conversations = await fetchConversations(
-      { ...promptXAuth, agentXToken },
+      { ...pxAuth, agentXToken },
       propsValue
     );
     return conversations;

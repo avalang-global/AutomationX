@@ -25,15 +25,28 @@ export const createConversationAction = createAction({
       required: false,
     }),
     agentId: Property.Dropdown({
+      auth: promptxAuth,
       displayName: 'Agent',
       description: 'Agent that you would like to converse with',
       required: true,
-      refreshers: [],
+      refreshers: ['auth'],
       options: async ({ auth }) => {
-        const promptXAuth = auth as PromptXAuthType;
-        const agentXToken = await getAgentXToken(promptXAuth);
+        if (!auth) {
+          return {
+            disabled: true,
+            options: [],
+          }
+        }
+        const pxAuth: PromptXAuthType = {
+          username: auth.props.username,
+          password: auth.props.password,
+          server: auth.props.server,
+          customAuthUrl: auth.props.customAuthUrl,
+          customAppUrl: auth.props.customAppUrl,
+        }
+        const agentXToken = await getAgentXToken(pxAuth);
         const agents = await fetchAgents({
-          ...promptXAuth,
+          ...pxAuth,
           agentXToken,
         });
         return {
@@ -49,10 +62,16 @@ export const createConversationAction = createAction({
     }),
   },
   async run({ auth, propsValue }) {
-    const promptXAuth = auth as PromptXAuthType;
-    const agentXToken = await getAgentXToken(promptXAuth);
+    const pxAuth: PromptXAuthType = {
+      username: auth.props.username,
+      password: auth.props.password,
+      server: auth.props.server,
+      customAuthUrl: auth.props.customAuthUrl,
+      customAppUrl: auth.props.customAppUrl,
+    }
+    const agentXToken = await getAgentXToken(pxAuth);
     const conversation = await createConversation(
-      { ...promptXAuth, agentXToken },
+      { ...pxAuth, agentXToken },
       propsValue
     );
     return conversation;
