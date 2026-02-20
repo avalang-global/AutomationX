@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSpeechRecognition } from 'react-speech-kit';
-import showdown from 'showdown';
 
 import './ChatWidget.css';
 import { microphoneSvgIcon } from './MicrophoneIcon';
+import { ChatMessage, Message } from './ChatMessage';
 
 export interface ThemeOptions {
   headerColor?: string;
@@ -52,6 +52,7 @@ export interface ChatWidgetProps {
   theme?: ThemeOptions;
   icon?: string | React.ReactNode;
   position?: PositionOptions;
+  avatar?: string;
 }
 
 const DEFAULT_WELCOME_MSG = '👋 Hi there! How can I help you today?';
@@ -74,8 +75,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   theme: userTheme = {},
   position: userPosition = {},
   icon,
+  avatar,
 }) => {
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     { from: 'bot', text: welcomeMessage },
   ]);
   const [input, setInput] = useState('');
@@ -121,14 +123,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-  const converter = new showdown.Converter({
-    tables: true,
-    simpleLineBreaks: true,
-    simplifiedAutoLink: true,
-    openLinksInNewWindow: true,
-    omitExtraWLInCodeBlocks: true,
-  });
-
   const adjustTextAreaHeight = () => {
     const textArea = textAreaRef.current;
     if (textArea) {
@@ -150,6 +144,13 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   useEffect(() => {
     adjustTextAreaHeight();
   }, [input]);
+
+  // Focus input field on load and when a request is completed
+  useEffect(() => {
+    if (!loading && !isMinimized) {
+      textAreaRef.current?.focus();
+    }
+  }, [loading, isMinimized]);
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -257,19 +258,13 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
         <>
           <div className="ax-chat-body">
             {messages.map((msg, i) => (
-              <div
+              <ChatMessage
                 key={i}
-                className={`ax-message ${
-                  msg.from === 'user' ? 'ax-user' : 'ax-bot'
-                }`}
-                style={msg.from === 'user' ? userMessageStyle : botMessageStyle}
-              >
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: converter.makeHtml(msg.text),
-                  }}
-                ></div>
-              </div>
+                avatar={avatar}
+                message={msg}
+                userMessageStyle={userMessageStyle}
+                botMessageStyle={botMessageStyle}
+              />
             ))}
             {loading && (
               <div className="ax-message ax-bot ax-typing-indicator">
