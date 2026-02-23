@@ -4,7 +4,7 @@ import { ActivepiecesError, AiModelProviderConfig, AiModelProviderName, AiModelP
 import { FastifyBaseLogger } from 'fastify'
 import { system } from '../helper/system/system'
 
-export const aiModelService = (log: FastifyBaseLogger) => ({
+export const platformAiProviderService = (log: FastifyBaseLogger) => ({
     listModels(): AiModelProviderSafeConfig[] {
         const availableAiModels: AiModelProviderSafeConfig[] = []
 

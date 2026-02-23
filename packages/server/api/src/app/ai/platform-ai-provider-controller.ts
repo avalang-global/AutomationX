@@ -2,14 +2,14 @@
 import { AiModelProviderConfig, AiModelProviderName, AiModelProviderSafeConfig, PrincipalType } from '@activepieces/shared'
 import { FastifyPluginAsyncTypebox, Type } from '@fastify/type-provider-typebox'
 import { StatusCodes } from 'http-status-codes'
-import { aiModelService } from './ai-model-service'
+import { platformAiProviderService } from './platform-ai-provider-service'
 
-export const aiModelController: FastifyPluginAsyncTypebox = async (app) => {
+export const platformAiProviderController: FastifyPluginAsyncTypebox = async (app) => {
     app.get('/', ListAIModelsRequest, async () => {
-        return aiModelService(app.log).listModels()
+        return platformAiProviderService(app.log).listModels()
     })
     app.get('/:provider', GetAIModelRequest, async (request) => {
-        return aiModelService(app.log).getModel({ provider: request.params.provider })
+        return platformAiProviderService(app.log).getModel({ provider: request.params.provider })
     })
 }
 
