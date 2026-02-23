@@ -5,7 +5,7 @@ import { FastifyBaseLogger } from 'fastify'
 import { system } from '../helper/system/system'
 
 export const platformAiProviderService = (log: FastifyBaseLogger) => ({
-    listModels(): AiModelProviderSafeConfig[] {
+    list(): AiModelProviderSafeConfig[] {
         const availableAiModels: AiModelProviderSafeConfig[] = []
 
         if (!isNil(system.get(AppSystemProp.PROMPTX_OPENAI_KEY))) {
@@ -23,7 +23,7 @@ export const platformAiProviderService = (log: FastifyBaseLogger) => ({
         return availableAiModels
     },
 
-    getModel({ provider }: GetModelParams): AiModelProviderConfig {
+    getOrThrow({ provider }: GetModelParams): AiModelProviderConfig {
         let apiKey: string | undefined
         switch (provider) {
             case AiModelProviderName.OpenAi: apiKey = system.get(AppSystemProp.PROMPTX_OPENAI_KEY); break

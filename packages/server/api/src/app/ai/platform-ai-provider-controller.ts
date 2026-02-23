@@ -5,15 +5,15 @@ import { StatusCodes } from 'http-status-codes'
 import { platformAiProviderService } from './platform-ai-provider-service'
 
 export const platformAiProviderController: FastifyPluginAsyncTypebox = async (app) => {
-    app.get('/', ListAIModelsRequest, async () => {
-        return platformAiProviderService(app.log).listModels()
+    app.get('/', ListPlatformAiProvidersRequest, async () => {
+        return platformAiProviderService(app.log).list()
     })
-    app.get('/:provider', GetAIModelRequest, async (request) => {
-        return platformAiProviderService(app.log).getModel({ provider: request.params.provider })
+    app.get('/:provider', GetPlatformAiProviderRequest, async (request) => {
+        return platformAiProviderService(app.log).getOrThrow({ provider: request.params.provider })
     })
 }
 
-const ListAIModelsRequest = {
+const ListPlatformAiProvidersRequest = {
     config: {
         allowedPrincipals: [PrincipalType.USER, PrincipalType.ENGINE] as const,
     },
@@ -24,7 +24,7 @@ const ListAIModelsRequest = {
     },
 }
 
-const GetAIModelRequest = {
+const GetPlatformAiProviderRequest = {
     config: {
         allowedPrincipals: [PrincipalType.ENGINE] as const,
     },
