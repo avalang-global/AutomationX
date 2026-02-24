@@ -1,4 +1,6 @@
+import { httpClient, HttpMethod } from '@activepieces/pieces-common';
 import { Store } from '@activepieces/pieces-framework';
+import { AiModelProviderConfig } from '@activepieces/shared';
 
 export const baseUrl = 'https://api.anthropic.com/v1';
 
@@ -8,17 +10,13 @@ export const billingIssueMessage = `Error Occurred: 429 \n
 2. Top-up the credit in promptX's Billing page. \n
 3. Attempt the process again`;
 
-export const unauthorizedMessage = `Error Occurred: 401 \n
-
-Ensure that your API key is valid. \n
-`;
 type UrlConfig = {
   loginUrl: string;
   quotaCheckUrl: string;
   addTokenUrl: string;
   myProfileUrl: string;
-  getAIKeyUrl: string;
 };
+
 type UsagePackage = {
   package_name: string;
   total_tokens_used: number;
@@ -28,6 +26,7 @@ type UsagePackage = {
   limit_credit_usage: number;
   credit_available: number;
 };
+
 type UserInfo = {
   userIAM2ID: string;
   email: string;
@@ -65,8 +64,6 @@ export const baseUrlMap: Record<string, UrlConfig> = {
     addTokenUrl:
       'https://promptxai.com/zero-service/pmtx-ai-token-api/v1/token-used',
     myProfileUrl: 'https://centerapp.io/center//api/v1/users/me',
-    getAIKeyUrl:
-      'https://promptxai.com/zero-service/pmtx-ai-token-api/v1/api-key?key=claudeKey',
   },
   staging: {
     loginUrl: 'https://test.oneweb.tech/zero-service/pmtx/login',
@@ -75,10 +72,9 @@ export const baseUrlMap: Record<string, UrlConfig> = {
     addTokenUrl:
       'https://test.oneweb.tech/zero-service/pmtx-ai-token-api/v1/token-used',
     myProfileUrl: 'https://mocha.centerapp.io/center//api/v1/users/me',
-    getAIKeyUrl:
-      'https://test.oneweb.tech/zero-service/pmtx-ai-token-api/v1/api-key?key=claudeKey',
   },
 };
+
 export const getAccessToken = async (
   server: string,
   username: string,
@@ -168,31 +164,39 @@ export const getStoreData = async (
   access_token: string
 ) => {
   let userId = await store.get('userId');
-  const apiKey = await getAiApiKey(server, access_token);
 
   if (!userId) {
     const userInfo = await getUserProfile(server, access_token);
     store.put('userId', userInfo.userIAM2ID);
     userId = userInfo.userIAM2ID;
   }
-  return { userId, apiKey };
+
+  return { userId };
 };
 
-export const getAiApiKey = async (server: string, access_token: string) => {
-  const response = await fetch(baseUrlMap[server].getAIKeyUrl, {
+export const getAiApiKey = async (apiUrl: string, engineToken: string) => {
+  const response = await httpClient.sendRequest<AiModelProviderConfig>({
+    method: HttpMethod.GET,
+    url: `${apiUrl}v1/platform-ai-providers/anthropic`,
     headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${access_token}`,
+      Authorization: `Bearer ${engineToken}`,
     },
   });
 
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  if (response.status !== 200) {
+    throw new Error(`API error: ${response.status}`);
   }
 
-  const result = await response.json();
-  if (!result?.claudeKey) {
-    throw new Error('No AI API Key found for Claude');
-  }
-  return result.claudeKey;
+  return response.body.apiKey;
+};
+
+export const getAnthropicModelOptions = () => {
+  return [
+    { value: 'claude-opus-4-1-20250805', label: 'Claude 4.1 Opus' },
+    { value: 'claude-sonnet-4-20250514', label: 'Claude 4 Sonnet' },
+    { value: 'claude-3-7-sonnet-20250219', label: 'Claude 3.7 Sonnet' },
+    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+    { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
+  ];
 };

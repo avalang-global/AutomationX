@@ -1,4 +1,6 @@
+import { httpClient, HttpMethod } from '@activepieces/pieces-common';
 import { Store } from '@activepieces/pieces-framework';
+import { AiModelProviderConfig } from '@activepieces/shared';
 
 export type PromptXAuthType = {
   server: 'production' | 'staging';
@@ -17,7 +19,6 @@ type UrlConfig = {
   quotaCheckUrl: string;
   addTokenUrl: string;
   myProfileUrl: string;
-  getAIKeyUrl: string;
 };
 
 type UsagePackage = {
@@ -61,8 +62,6 @@ export const baseUrlMap: Record<string, UrlConfig> = {
     addTokenUrl:
       'https://promptxai.com/zero-service/pmtx-ai-token-api/v1/token-used',
     myProfileUrl: 'https://centerapp.io/center//api/v1/users/me',
-    getAIKeyUrl:
-      'https://promptxai.com/zero-service/pmtx-ai-token-api/v1/api-key?key=openAIKey',
   },
   staging: {
     loginUrl: 'https://test.oneweb.tech/zero-service/pmtx/login',
@@ -71,8 +70,6 @@ export const baseUrlMap: Record<string, UrlConfig> = {
     addTokenUrl:
       'https://test.oneweb.tech/zero-service/pmtx-ai-token-api/v1/token-used',
     myProfileUrl: 'https://mocha.centerapp.io/center//api/v1/users/me',
-    getAIKeyUrl:
-      'https://test.oneweb.tech/zero-service/pmtx-ai-token-api/v1/api-key?key=openAIKey',
   },
 };
 
@@ -175,9 +172,7 @@ export const getStoreData = async (
   server: 'production' | 'staging',
   access_token: string
 ) => {
-  // Get store data
   let userId = await store.get('userId');
-  const apiKey = await getAiApiKey(server, access_token);
 
   if (!userId) {
     const userInfo = await getUserProfile(server, access_token);
@@ -185,29 +180,32 @@ export const getStoreData = async (
     userId = userInfo.userIAM2ID;
   }
 
-  return { userId, apiKey };
+  return { userId };
 };
 
-export const getAiApiKey = async (
-  server: 'production' | 'staging',
-  access_token: string
-) => {
-  const response = await fetch(baseUrlMap[server].getAIKeyUrl, {
-    method: 'GET',
+export const getAiApiKey = async (apiUrl: string, engineToken: string) => {
+  const response = await httpClient.sendRequest<AiModelProviderConfig>({
+    method: HttpMethod.GET,
+    url: `${apiUrl}v1/platform-ai-providers/openai`,
     headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${access_token}`,
+      Authorization: `Bearer ${engineToken}`,
     },
   });
 
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  if (response.status !== 200) {
+    throw new Error(`API error: ${response.status}`);
   }
 
-  const result = await response.json();
-  if (!result.openAIKey) {
-    throw new Error('No AI API Key found in response');
-  }
-
-  return result.openAIKey;
+  return response.body.apiKey;
 };
+
+export const getOpenAiModelOptions = () => {
+  return [
+    { label: 'GPT-5.1', value: 'gpt-5.1' },
+    { label: 'GPT-5-mini', value: 'gpt-5-mini' },
+    { label: 'GPT-5-nano', value: 'gpt-5-nano' },
+    { label: 'GPT-4.1', value: 'gpt-4.1' },
+    { label: 'GPT-4.1-mini', value: 'gpt-4.1-mini' },
+    { label: 'GPT-4.1-nano', value: 'gpt-4.1-nano' },
+  ];
+}
