@@ -2,13 +2,15 @@ import { createAction, Property } from '@activepieces/pieces-framework';
 import { isNil } from '@activepieces/shared';
 import Anthropic from '@anthropic-ai/sdk';
 import { TextBlock, ToolUseBlock } from '@anthropic-ai/sdk/resources';
-import { promptxAuth } from '../../index';
 import Ajv from 'ajv';
 import mime from 'mime-types';
+import { promptxAuth } from '../../index';
 import {
   addTokenUsage,
   billingIssueMessage,
   getAccessToken,
+  getAiApiKey,
+  getAnthropicModelOptions,
   getStoreData,
   getUsagePlan,
 } from '../common/common';
@@ -24,17 +26,10 @@ export const extractStructuredDataAction = createAction({
       required: true,
       description:
         'The model which will generate the completion. Some models are suitable for natural language tasks, others specialize in code.',
-      defaultValue: 'claude-3-haiku-20240307',
+      defaultValue: 'claude-3-5-sonnet-20241022',
       options: {
         disabled: false,
-        options: [
-          { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
-          { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet' },
-          { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-          { value: 'claude-3-5-sonnet-latest', label: 'Claude 3.5 Sonnet' },
-          { value: 'claude-3-5-haiku-latest', label: 'Claude 3.5 Haiku' },
-          { value: 'claude-3-7-sonnet-latest', label: 'Claude 3.7 Sonnet' },
-        ],
+        options: getAnthropicModelOptions(),
       },
     }),
     text: Property.LongText({
@@ -67,6 +62,7 @@ export const extractStructuredDataAction = createAction({
       },
     }),
     schema: Property.DynamicProperties({
+      auth: promptxAuth,
       displayName: 'Data Definition',
       required: true,
       refreshers: ['mode'],
@@ -145,24 +141,32 @@ export const extractStructuredDataAction = createAction({
   async run(context) {
     const { model, text, image, schema, prompt, maxTokens } =
       context.propsValue;
-    const { server, username, password } = context.auth;
+    const { server, username, password } = context.auth.props;
     const {
       current: { id: flowId },
     } = context.flows;
     const { id: projectId } = context.project;
+
     const accessToken = await getAccessToken(server, username, password);
-    //get store data
-    const { userId, apiKey } = await getStoreData(
+
+    const apiKey = await getAiApiKey(
+      context.server.apiUrl,
+      context.server.token
+    );
+
+    const { userId } = await getStoreData(
       context.store,
       server,
       accessToken as string
     );
 
     const usage = await getUsagePlan(server, accessToken as string);
-    //check token is available
+
+    // check token is available
     if (maxTokens && maxTokens > usage.token_available) {
       throw new Error(billingIssueMessage);
     }
+
     if (!text && !image) {
       throw new Error('Please provide text or image/PDF to extract data from.');
     }
@@ -212,9 +216,7 @@ export const extractStructuredDataAction = createAction({
       };
     }
 
-    const anthropic = new Anthropic({
-      apiKey: `${apiKey}`,
-    });
+    const anthropic = new Anthropic({ apiKey });
 
     const messages: Anthropic.Messages.MessageParam[] = [
       {
@@ -316,7 +318,7 @@ export const extractStructuredDataAction = createAction({
       await addTokenUsage(
         {
           userId: `${userId}`,
-          model: response.model, // 'claude-3-5-sonnet-20240620'
+          model: response.model,
           projectId: projectId,
           flowId: flowId,
           component: 'Automationx',
