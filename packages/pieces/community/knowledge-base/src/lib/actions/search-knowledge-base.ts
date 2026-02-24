@@ -11,22 +11,36 @@ export const searchKnowledgeBase = createAction({
   auth: promptxAuth,
   props: {
     knowledgeBaseId: Property.Dropdown({
+      auth: promptxAuth,
       displayName: 'Knowledge Base ID',
       description: 'The knowledge base ID to search in',
       required: true,
       refreshers: [],
       options: async ({ auth }) => {
-        const promptxAuth = auth as PromptXAuth;
+        if (!auth) {
+          return {
+            disabled: true,
+            options: [],
+            placeholder: 'Please authenticate first',
+          }
+        }
+        const pxAuth: PromptXAuth = {
+          server: auth.props.server ?? 'production',
+          username: auth.props.username,
+          password: auth.props.password,
+          customAppUrl: auth.props.customAppUrl,
+          customAuthUrl: auth.props.customAuthUrl,
+        };
         try {
           const urls = fetchUrls(
-            promptxAuth.server ?? 'production',
-            promptxAuth.customAuthUrl,
-            promptxAuth.customAppUrl
+            pxAuth.server,
+            pxAuth.customAuthUrl,
+            pxAuth.customAppUrl
           );
           const accessToken = await getAccessToken(
             urls.CENTER_AUTH_LOGIN_URL,
-            promptxAuth.username,
-            promptxAuth.password
+            pxAuth.username,
+            pxAuth.password
           );
           const userMe = await getUserMe(
             urls.CENTER_API_USERS_ME_URL,
@@ -120,15 +134,15 @@ export const searchKnowledgeBase = createAction({
     } = propsValue;
 
     try {
-      const {
-        server = 'production',
-        username,
-        password,
-        customAuthUrl,
-        customAppUrl,
-      } = auth;
-      const urls = fetchUrls(server, customAuthUrl, customAppUrl);
-      const accessToken = await getAccessToken(urls.CENTER_AUTH_LOGIN_URL, username, password);
+      const pxAuth: PromptXAuth = {
+        server: auth.props.server ?? 'production',
+        username: auth.props.username,
+        password: auth.props.password,
+        customAppUrl: auth.props.customAppUrl,
+        customAuthUrl: auth.props.customAuthUrl,
+      };
+      const urls = fetchUrls(pxAuth.server, pxAuth.customAuthUrl, pxAuth.customAppUrl);
+      const accessToken = await getAccessToken(urls.CENTER_AUTH_LOGIN_URL, pxAuth.username, pxAuth.password);
       const userMe = await getUserMe(urls.CENTER_API_USERS_ME_URL, accessToken);
 
       const tagArray = Array.isArray(filterTags)
