@@ -1,7 +1,7 @@
 export type Server = 'staging' | 'production';
 
 export type PromptXAuth = {
-  server?: Server;
+  server: Server;
   username: string;
   password: string;
   customAuthUrl?: string;
