@@ -192,11 +192,12 @@ export const getAiApiKey = async (apiUrl: string, engineToken: string) => {
 
 export const getAnthropicModelOptions = () => {
   return [
+    { value: 'claude-sonnet-4-6', label: 'Claude 4.6 Sonnet' },
+    { value: 'claude-opus-4-6', label: 'Claude 4.6 Opus' },
+    { value: 'claude-haiku-4-5-20251001', label: 'Claude 4.5 Haiku' },
     { value: 'claude-opus-4-1-20250805', label: 'Claude 4.1 Opus' },
+    { value: 'claude-opus-4-20250514', label: 'Claude 4 Opus' },
     { value: 'claude-sonnet-4-20250514', label: 'Claude 4 Sonnet' },
-    { value: 'claude-3-7-sonnet-20250219', label: 'Claude 3.7 Sonnet' },
-    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
     { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
   ];
 };
