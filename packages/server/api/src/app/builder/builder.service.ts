@@ -1,5 +1,5 @@
-import { AppSystemProp } from '@activepieces/server-shared'
 import {
+    AiModelProviderName,
     apId,
     assertNotNullOrUndefined,
     BuilderMessage,
@@ -25,10 +25,10 @@ import {
 } from 'ai'
 import dayjs from 'dayjs'
 import { FastifyBaseLogger } from 'fastify'
+import { platformAiProviderService } from '../ai/platform-ai-provider-service'
 import { repoFactory } from '../core/db/repo-factory'
 import { flowService } from '../flows/flow/flow.service'
 import { flowVersionService } from '../flows/flow-version/flow-version.service'
-import { system } from '../helper/system/system'
 import { platformPlanService } from '../platform-plan/platform-plan.service'
 import { buildBuilderTools } from './builder.tools'
 import { BuilderOpenAiModel, builderSystemPromptV2 } from './constants'
@@ -163,9 +163,9 @@ const postProcessResult = (result: GenerateTextResult<ReturnType<typeof buildBui
     return messages
 }
 
-const promptxOpenAiModel = async (): Promise<LanguageModelV2> => {
-    const openAiKey = system.getOrThrow(AppSystemProp.PROMPTX_OPENAI_KEY)
-    const provider = createOpenAI({ apiKey: openAiKey })
+const promptxOpenAiModel = async (log: FastifyBaseLogger): Promise<LanguageModelV2> => {
+    const openAiProvider = platformAiProviderService(log).getOrThrow({ provider: AiModelProviderName.OpenAi })
+    const provider = createOpenAI({ apiKey: openAiProvider.apiKey })
     return provider(BuilderOpenAiModel)
 }
 
@@ -236,7 +236,7 @@ export const builderService = (log: FastifyBaseLogger) => ({
             return { role: 'tool', content: o.content as unknown as ToolContent }
         })
 
-        const model = await promptxOpenAiModel()
+        const model = await promptxOpenAiModel(log)
         const result = await generateText({
             model,
             stopWhen: stepCountIs(STEP_COUNT_LIMIT),

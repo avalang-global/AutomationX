@@ -99,6 +99,7 @@ export * from './lib/botx'
 export * from './lib/project-member'
 export * from './lib/email'
 export * from './lib/prompt-to-workflow'
+export * from './lib/platform-ai-providers'
 TypeSystemPolicy.ExactOptionalPropertyTypes = false
 export * from './lib/workers/queue-metrics'
 export * from './lib/health'

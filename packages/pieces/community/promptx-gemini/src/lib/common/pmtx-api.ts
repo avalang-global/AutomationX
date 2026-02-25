@@ -1,4 +1,6 @@
+import { httpClient, HttpMethod } from '@activepieces/pieces-common';
 import { Store } from '@activepieces/pieces-framework';
+import { AiModelProviderConfig } from '@activepieces/shared';
 
 export type PromptXAuthType = {
   server: 'production' | 'staging';
@@ -17,7 +19,6 @@ type UrlConfig = {
   quotaCheckUrl: string;
   addTokenUrl: string;
   myProfileUrl: string;
-  getAIKeyUrl: string;
 };
 
 type UsagePackage = {
@@ -61,8 +62,6 @@ export const baseUrlMap: Record<string, UrlConfig> = {
     addTokenUrl:
       'https://promptxai.com/zero-service/pmtx-ai-token-api/v1/token-used',
     myProfileUrl: 'https://centerapp.io/center//api/v1/users/me',
-    getAIKeyUrl:
-      'https://promptxai.com/zero-service/pmtx-ai-token-api/v1/api-key?key=geminiKey',
   },
   staging: {
     loginUrl: 'https://test.oneweb.tech/zero-service/pmtx/login',
@@ -71,8 +70,6 @@ export const baseUrlMap: Record<string, UrlConfig> = {
     addTokenUrl:
       'https://test.oneweb.tech/zero-service/pmtx-ai-token-api/v1/token-used',
     myProfileUrl: 'https://mocha.centerapp.io/center//api/v1/users/me',
-    getAIKeyUrl:
-      'https://test.oneweb.tech/zero-service/pmtx-ai-token-api/v1/api-key?key=geminiKey',
   },
 };
 
@@ -169,52 +166,28 @@ export const getStoreData = async (
   server: 'production' | 'staging',
   access_token: string
 ) => {
-  // Get store data
   let userId = await store.get('userId');
-  const apiKey = await getAiApiKey(server, access_token);
 
   if (!userId) {
     const userInfo = await getUserProfile(server, access_token);
     store.put('userId', userInfo.userIAM2ID);
     userId = userInfo.userIAM2ID;
   }
-  return {
-    userId,
-    apiKey,
-  };
+  return { userId };
 };
 
-export const getAiApiKey = async (
-  server: 'production' | 'staging',
-  access_token: string
-) => {
-  const response = await fetch(baseUrlMap[server]['getAIKeyUrl'], {
+export const getAiApiKey = async (apiUrl: string, engineToken: string) => {
+  const response = await httpClient.sendRequest<AiModelProviderConfig>({
+    method: HttpMethod.GET,
+    url: `${apiUrl}v1/platform-ai-providers/google`,
     headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${access_token}`,
+      Authorization: `Bearer ${engineToken}`,
     },
   });
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status} ${response.statusText}`);
-  }
-  const result: { geminiKey?: string } = await response.json();
-  if (!result.geminiKey) {
-    throw new Error('No AI API Key found for Avalant geminiKey');
-  }
-  return result.geminiKey;
-};
 
-export const getApiKeyFrommAuth = async (
-  auth: PromptXAuthType
-): Promise<string> => {
-  let accessToken: string;
-  let geminiKey: string;
-  try {
-    accessToken = await getAccessToken(auth);
-    geminiKey = await getAiApiKey(auth.server, accessToken);
-    return geminiKey;
-  } catch (error) {
-    console.error(error);
-    throw new Error('Unable to fetch gemini key. Please check connection');
+  if (response.status !== 200) {
+    throw new Error(`API error: ${response.status}`);
   }
+
+  return response.body.apiKey;
 };

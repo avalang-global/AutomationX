@@ -1,11 +1,11 @@
 import { promptxAuth } from '../../';
 import { createAction, Property } from '@activepieces/pieces-framework';
 import OpenAI from 'openai';
-import { notLLMs } from '../common/common';
 import {
   addTokenUsage,
   getAccessToken,
   getAiApiKey,
+  getOpenAiModelOptions,
   getStoreData,
   getUsagePlan,
   PromptXAuthType,
@@ -17,52 +17,13 @@ export const extractStructuredDataAction = createAction({
   displayName: 'Extract Structured Data from Text',
   description: 'Returns structured data from provided unstructured text.',
   props: {
-    model: Property.Dropdown({
+    model: Property.StaticDropdown({
       displayName: 'Model',
       required: true,
-      refreshers: [],
-      defaultValue: 'gpt-3.5-turbo',
-      options: async ({ auth }) => {
-        const promptxAuth = auth as PromptXAuthType;
-        let accessToken: string;
-        let openApiKey: string;
-
-        try {
-          accessToken = await getAccessToken(promptxAuth);
-          openApiKey = await getAiApiKey(promptxAuth.server, accessToken);
-        } catch (error) {
-          return {
-            disabled: true,
-            placeholder: 'Unable to fetch OpenAI key. Check connection',
-            options: [],
-          };
-        }
-
-        try {
-          const openai = new OpenAI({ apiKey: openApiKey });
-          const response = await openai.models.list();
-
-          // We need to get only LLM models
-          const models = response.data.filter(
-            (model) => !notLLMs.includes(model.id)
-          );
-
-          return {
-            disabled: false,
-            options: models.map((model) => {
-              return {
-                label: model.id,
-                value: model.id,
-              };
-            }),
-          };
-        } catch (error) {
-          return {
-            disabled: true,
-            options: [],
-            placeholder: "Couldn't load models, API key is invalid",
-          };
-        }
+      defaultValue: 'gpt-5-mini',
+      options: {
+        disabled: false,
+        options: getOpenAiModelOptions(),
       },
     }),
     text: Property.LongText({
@@ -107,19 +68,22 @@ export const extractStructuredDataAction = createAction({
       },
     }),
   },
-  async run({ auth, store, project, flows, propsValue }) {
-    const promptxAuth = auth as PromptXAuthType;
-    const accessToken = await getAccessToken(promptxAuth);
-    const usage = await getUsagePlan(promptxAuth.server, accessToken);
-
-    // Get store data
-    const { userId, apiKey } = await getStoreData(
-      store,
-      promptxAuth.server,
-      accessToken
-    );
-
+  async run(context) {
+    const { auth, propsValue, store, project, flows } = context;
     const { model, text } = propsValue;
+    const pxAuth: PromptXAuthType = {
+      server: auth.props.server === 'production' ? 'production' : 'staging',
+      username: auth.props.username,
+      password: auth.props.password,
+    };
+    const accessToken = await getAccessToken(pxAuth);
+    const apiKey = await getAiApiKey(
+      context.server.apiUrl,
+      context.server.token
+    );
+    const usage = await getUsagePlan(pxAuth.server, accessToken);
+    const { userId } = await getStoreData(store, pxAuth.server, accessToken);
+
     const paramInputArray = propsValue.params as ParamInput[];
     const functionParams: Record<string, unknown> = {};
     const requiredFunctionParams: string[] = [];
@@ -175,7 +139,7 @@ export const extractStructuredDataAction = createAction({
             totalTokens: response.usage?.total_tokens ?? 0,
           },
         },
-        promptxAuth.server,
+        pxAuth.server,
         accessToken
       );
 
