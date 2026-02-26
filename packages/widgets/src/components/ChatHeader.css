@@ -1,0 +1,40 @@
+.ax-chat-header {
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 1rem; /* 16px equivalent */
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.ax-chat-header:hover,
+.ax-minimized .ax-chat-header:hover {
+  background: #0069e0; /* Subtle hover cue for interactivity */
+}
+
+.ax-minimized .ax-chat-header {
+  gap: 8px;
+}
+
+.ax-chat-title {
+  white-space: nowrap; /* Prevent text from wrapping */
+  overflow: hidden; /* Hide text that overflows the container */
+  text-overflow: ellipsis; /* Display ellipsis (…) for overflowing text */
+  user-select: none;
+}
+
+.ax-chat-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+}
+
+.ax-minimize-indicator {
+  margin: auto 5px;
+  display: inline-block;
+  font-size: 13px;
+  opacity: 0.85;
+}
