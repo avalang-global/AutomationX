@@ -1,0 +1,45 @@
+.ax-chat-badge.bubble {
+  width: 3rem;
+  height: 3rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.ax-chat-badge.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+
+  height: 3rem;
+  padding: 0 1rem 0 0.5rem;
+
+  background: #1f2937;
+  color: white;
+
+  border-radius: 999px;
+
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+
+  white-space: nowrap; /* prevents text wrapping */
+  flex-shrink: 0; /* prevents squishing */
+}
+
+.ax-chat-badge.pill img {
+  width: 2rem;
+  height: 2rem;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.ax-chat-badge.bubble img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

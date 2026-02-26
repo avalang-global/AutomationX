@@ -2,8 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSpeechRecognition } from 'react-speech-kit';
 
 import './ChatWidget.css';
-import { microphoneSvgIcon } from './MicrophoneIcon';
-import { ChatMessage, Message } from './ChatMessage';
+import { Message } from './ChatMessage';
+import { ChatHeader } from './ChatHeader';
+import { ChatFooter } from './ChatFooter';
+import { ChatBody } from './ChatBody';
+import { ChatBadge } from './ChatBadge';
 
 export interface ThemeOptions {
   headerColor?: string;
@@ -56,7 +59,6 @@ export interface ChatWidgetProps {
 }
 
 const DEFAULT_WELCOME_MSG = '👋 Hi there! How can I help you today?';
-const DEFAULT_TITLE = 'Chat';
 
 const getOrCreateSessionId = () => {
   const key = 'ax_chat_session_id';
@@ -120,37 +122,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       };
 
   const sessionIdRef = useRef<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
-
-  const adjustTextAreaHeight = () => {
-    const textArea = textAreaRef.current;
-    if (textArea) {
-      textArea.style.height = 'auto'; // Reset height before adjusting
-      textArea.style.height = `${textArea.scrollHeight}px`; // Set height based on content
-    }
-  };
 
   useEffect(() => {
     sessionIdRef.current = getOrCreateSessionId();
   }, []);
-
-  // Automatically scroll to bottom when messages update
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Adjust height on input change
-  useEffect(() => {
-    adjustTextAreaHeight();
-  }, [input]);
-
-  // Focus input field on load and when a request is completed
-  useEffect(() => {
-    if (!loading && !isMinimized) {
-      textAreaRef.current?.focus();
-    }
-  }, [loading, isMinimized]);
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -218,9 +193,17 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     color: theme.botMessageTextColor,
   };
 
+  const variant = title ? 'pill' : 'bubble';
+
+  const classes = ['ax-chat-container'];
+  if (isMinimized) {
+    classes.push('ax-minimized');
+    classes.push(variant);
+  }
+
   return (
     <div
-      className={`ax-chat-container ${isMinimized ? 'ax-minimized' : ''}`}
+      className={classes.join(' ')}
       style={{
         ...bodyStyle,
         position: 'fixed',
@@ -228,94 +211,41 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
         [position.horizontal]: position.offsetX,
       }}
     >
-      <div
-        className="ax-chat-header"
-        style={headerStyle}
-        onClick={() => setIsMinimized(!isMinimized)}
-      >
-        {icon &&
-          (typeof icon === 'string' ? (
-            <img
-              src={icon}
-              alt="Chat icon"
-              className="ax-chat-icon"
-              style={{ width: 24, height: 24 }}
-            />
-          ) : (
-            <span className="ax-chat-icon">{icon}</span>
-          ))}
-        {title
-          ? title
-          : icon
-          ? null
-          : DEFAULT_TITLE && (
-              <span className="ax-chat-title">{title ?? DEFAULT_TITLE}</span>
-            )}
-        {!isMinimized && <span className="ax-minimize-indicator">x</span>}
-      </div>
-
-      {!isMinimized && (
-        <>
-          <div className="ax-chat-body">
-            {messages.map((msg, i) => (
-              <ChatMessage
-                key={i}
-                avatar={avatar}
-                message={msg}
-                userMessageStyle={userMessageStyle}
-                botMessageStyle={botMessageStyle}
-              />
-            ))}
-            {loading && (
-              <div className="ax-message ax-bot ax-typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className="ax-chat-footer">
-            <textarea
-              ref={textAreaRef}
-              placeholder={listening ? 'Listening...' : 'Type a message...'}
-              value={listening ? speechContent : input}
-              style={inputStyle}
-              disabled={loading || listening}
-              onChange={(e) => {
-                setInput(e.target.value);
-              }}
-              onKeyDown={(e) => {
-                // Submit on Enter WITHOUT Shift
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              rows={1}
-            />
-            <button onClick={toggleSpeech} style={{ padding: 10 }}>
-              {listening
-                ? microphoneSvgIcon({
-                    type: 'off',
-                    strokeColor: userTheme.buttonTextColor,
-                  })
-                : microphoneSvgIcon({
-                    type: 'on',
-                    strokeColor: userTheme.buttonTextColor,
-                  })}
-            </button>
-            <button
-              onClick={sendMessage}
-              disabled={loading}
-              style={buttonStyle}
-            >
-              Send
-            </button>
-          </div>
-        </>
-      )}
+      <ChatBadge
+        mode={variant}
+        isMinimized={isMinimized}
+        onMinimizeToggle={() => setIsMinimized(!isMinimized)}
+        icon={icon}
+        title={title}
+      />
+      <ChatHeader
+        isMinimized={isMinimized}
+        onMinimizeToggle={() => setIsMinimized(!isMinimized)}
+        icon={icon}
+        title={title}
+        headerStyle={headerStyle}
+      />
+      <ChatBody
+        isMinimized={isMinimized}
+        loading={loading}
+        avatar={avatar}
+        messages={messages}
+        userMessageStyle={userMessageStyle}
+        botMessageStyle={botMessageStyle}
+      />
+      <ChatFooter
+        isMinimized={isMinimized}
+        loading={loading}
+        listening={listening}
+        textContent={input}
+        speechContent={speechContent}
+        inputStyle={inputStyle}
+        buttonStyle={buttonStyle}
+        theme={userTheme}
+        onSetInput={setInput}
+        onSendMessage={sendMessage}
+        onToggleSpeech={toggleSpeech}
+      />
     </div>
   );
 };

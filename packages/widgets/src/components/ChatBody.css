@@ -1,0 +1,89 @@
+.ax-chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent; /* Firefox */
+  font-size: 0.875rem; /* 14px equivalent */
+}
+
+.ax-message {
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 14px;
+  max-width: 80%;
+  word-break: break-word;
+  line-height: 1.4;
+  animation: fadeIn 0.3s ease;
+}
+
+.ax-user {
+  align-self: flex-end;
+  border-top-right-radius: 4px;
+}
+
+.ax-bot {
+  align-self: flex-start;
+  border-top-left-radius: 4px;
+}
+
+/* === Scrollbar === */
+.ax-chat-body::-webkit-scrollbar {
+  width: 6px;
+}
+.ax-chat-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+/* Loading Indicator */
+.ax-typing-indicator {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 12px;
+}
+
+.ax-typing-indicator span {
+  width: 8px;
+  height: 8px;
+  background-color: #ffffff; /* always visible */
+  border-radius: 50%;
+  display: inline-block;
+  animation: ax-bounce 0.6s infinite alternate;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset; /* crisp visibility on dark */
+}
+
+.ax-typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ax-typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes ax-bounce {
+  from {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
