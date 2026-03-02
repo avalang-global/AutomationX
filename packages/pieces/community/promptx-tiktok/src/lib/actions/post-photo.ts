@@ -15,7 +15,7 @@ export const postPhotos = createAction({
     description: Property.LongText({
       displayName: 'Description',
       description: 'Description or caption of the post',
-      required: true,
+      required: false,
     }),
     disableComment: Property.Checkbox({
       displayName: 'Disable Comments',
@@ -24,13 +24,13 @@ export const postPhotos = createAction({
     }),
     privacyLevel: Property.StaticDropdown({
       displayName: 'Privacy Level',
-      description: 'Privacy level of the post',
       required: true,
       options: {
         options: [
+          { label: 'Only Me (Sandbox)', value: 'SELF_ONLY' },
           { label: 'Public to Everyone', value: 'PUBLIC_TO_EVERYONE' },
           { label: 'Private', value: 'PRIVATE' },
-          { label: 'Friends Only', value: 'FRIENDS' },
+          { label: 'Friends Only', value: 'MUTUAL_FOLLOW_FRIENDS' },
         ],
       },
     }),
@@ -46,18 +46,19 @@ export const postPhotos = createAction({
     }),
     photoImages: Property.Array({
       displayName: 'Photo URLs',
-      description: 'Array of photo URLs to post',
+      description:
+        'Array of photo URLs to post (must be from a verified domain in TikTok Developer Portal)',
       required: true,
     }),
     postMode: Property.StaticDropdown({
       displayName: 'Post Mode',
       description: 'How to post the content',
       required: true,
+      defaultValue: 'DIRECT_POST',
       options: {
         options: [
           { label: 'Direct Post', value: 'DIRECT_POST' },
-          { label: 'Draft', value: 'DRAFT' },
-          { label: 'Schedule', value: 'SCHEDULE' },
+          { label: 'Draft', value: 'MEDIA_UPLOAD' },
         ],
       },
     }),
@@ -75,6 +76,16 @@ export const postPhotos = createAction({
       postMode,
     } = context.propsValue;
 
+    await httpClient.sendRequest({
+      method: HttpMethod.POST,
+      url: `${baseUrl}/post/publish/creator_info/query/`,
+      headers: {
+        Authorization: `Bearer ${context.auth.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: {},
+    });
+
     const res = await httpClient.sendRequest({
       method: HttpMethod.POST,
       url: `${baseUrl}/post/publish/content/init/`,
@@ -85,9 +96,9 @@ export const postPhotos = createAction({
       body: {
         post_info: {
           title: title,
-          description: description,
-          disable_comment: disableComment ?? false,
+          description: description ?? '',
           privacy_level: privacyLevel,
+          disable_comment: disableComment ?? false,
           auto_add_music: autoAddMusic ?? false,
         },
         source_info: {
@@ -99,6 +110,7 @@ export const postPhotos = createAction({
         media_type: 'PHOTO',
       },
     });
+
     return res.body;
   },
 });

@@ -48,7 +48,7 @@ export const credentialsOauth2Service = (log: FastifyBaseLogger): OAuth2Service<
             if (request.codeVerifier) {
                 body.code_verifier = request.codeVerifier
             }
-           
+
             const headers: Record<string, string> = {
                 'content-type': 'application/x-www-form-urlencoded',
                 accept: 'application/json',
@@ -58,6 +58,8 @@ export const credentialsOauth2Service = (log: FastifyBaseLogger): OAuth2Service<
             switch (authorizationMethod) {
                 case OAuth2AuthorizationMethod.BODY:
                     body.client_id = request.clientId
+                    // todo(Rupal): Required by tiktok piece
+                    body.client_key = request.clientId
                     body.client_secret = request.clientSecret!
                     break
                 case OAuth2AuthorizationMethod.HEADER:
@@ -152,6 +154,8 @@ export const credentialsOauth2Service = (log: FastifyBaseLogger): OAuth2Service<
         switch (authorizationMethod) {
             case OAuth2AuthorizationMethod.BODY:
                 body.client_id = appConnection.client_id
+                // todo(Rupal): Required by tiktok piece
+                body.client_key = appConnection.client_id
                 body.client_secret = appConnection.client_secret
                 break
             case OAuth2AuthorizationMethod.HEADER:
