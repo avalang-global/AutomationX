@@ -8,7 +8,7 @@ export const tiktok = createPiece({
   auth: tiktokAuth,
   displayName: 'Tiktok',
   description: 'Interact with TikTok social platform',
-  minimumSupportedRelease: '0.36.1',
+  minimumSupportedRelease: '0.74.3',
   logoUrl: 'https://s.magecdn.com/social/tc-tiktok.svg',
   authors: ['worachot.c'],
   actions: [
