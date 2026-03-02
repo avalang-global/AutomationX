@@ -20,6 +20,7 @@ import { flowsApi } from '@/features/flows/lib/flows-api';
 import { templatesApi } from '@/features/templates/lib/templates-api';
 import { userHooks } from '@/hooks/user-hooks';
 import { useNewWindow } from '@/lib/navigation-utils';
+import { authenticationSession } from '@/lib/authentication-session';
 import { Template } from '@activepieces/shared';
 
 const ShareTemplateSchema = Type.Object({
@@ -47,6 +48,12 @@ const ShareTemplateDialog: React.FC<{
     { flowId: string; description: string }
   >({
     mutationFn: async () => {
+      const token = authenticationSession.getToken();
+      if (!token) {
+        window.location.href = '/sign-in';
+        throw new Error('Session expired. Please login again.');
+      }
+
       const template = await flowsApi.getTemplate(flowId, {
         versionId: flowVersionId,
       });
@@ -71,8 +78,14 @@ const ShareTemplateDialog: React.FC<{
       return flowTemplate;
     },
     onSuccess: (data) => {
-      openNewIndow(`/templates/${data.id}`);
+      window.open(`${window.location.origin}/templates/${data.id}`, '_blank', 'noopener noreferrer');
       setIsShareDialogOpen(false);
+    },
+    onError: (error) => {
+      if (error.message === 'Session expired. Please login again.') {
+        return;
+      }
+      console.error('Failed to create template:', error);
     },
   });
 
