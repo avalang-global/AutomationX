@@ -8,10 +8,12 @@ export const tiktokAuth = PieceAuth.OAuth2({
   4. Copy the Client Key and Client Secret from the app settings.
   5. Add your redirect URL in the app configuration.
   6. Go to **Scopes** and add the required scopes like **user.info.basic**, **video.list**, and **video.publish**.`,
-  authUrl: 'https://www.tiktok.com/auth/authorize/',
+  authUrl: 'https://www.tiktok.com/v2/auth/authorize/',
   tokenUrl: 'https://open.tiktokapis.com/v2/oauth/token/',
   required: true,
-  scope: ['user.info.basic', 'video.list', 'video.publish'],
+  scope: ['video.publish,video.upload,user.info.basic,user.info.profile,video.list'],
+  pkce: true,
+  pkceMethod: 'S256',
 });
 
 export const baseUrl = 'https://open.tiktokapis.com/v2';
