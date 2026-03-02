@@ -1,7 +1,5 @@
 # AutomationX Widgets
 
-This library was generated with [Nx](https://nx.dev).
-
 ## Introduction
 
 AutomationX Widgets provides customizable UI components to seamlessly interact with your AutomationX workflows
@@ -70,7 +68,7 @@ Notice the additional `css` link tag which is required
 <script>
   widgets.createChat({
     title: 'AutomationX Chat',
-    welcomeMessage: 'Hi there 👋',
+    welcomeMessage: 'Hi there',
     webhookUrl: 'http://127.0.0.1:4200/api/v1/webhooks/2AeEyRaC5FyEp1WvBuaVK/sync',
   });
 </script>
@@ -90,6 +88,7 @@ Ones with "?" can be left empty as they will fallback to default values
   webhookUrl: string; // Published flow's live URL (Notice the /sync suffix)
   title?: string; // Shown on the chat header (expanded and collapsed)
   welcomeMessage?: string;
+  avatar?: string; // Image URL to be shown alongside bot messages in expanded view
   icon?: string | React.ReactNode; // Icon URL (png, svg) or a <svg>...</svg> element when used in ES modules (React)
   theme?: {
     headerColor?: string; // #333
@@ -120,21 +119,29 @@ Ones with "?" can be left empty as they will fallback to default values
 
 ### Look & Feel
 
-When collapsed (Default)
+When collapsed, default, with no icon and title
 
-![Collapsed Chat Widget](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/default-collapsed.png)
+![Collapsed default](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/default-collapsed.png)
 
-When expanded (Default)
+When collapsed, themed, with icon and title
 
-![Expanded Chat Widget](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/default-expanded.png)
+![Collapsed pill](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/badge-pill.png)
 
-With theme, icon and title; Collapsed (Customized)
+When collapsed, themed, with only icon
 
-![Collapsed Customized Widget](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/icon-title-collapsed.png)
+![Collapsed bubble](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/badge-bubble.png)
 
-With theme, icon and title; Expanded (Customized)
+When expanded, default, with no icon and title
 
-![Expanded Customized Widget](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/icon-title-expanded.png)
+![Expanded default](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/default-expanded.png)
+
+When expanded, themed, with icon and title
+
+![Expanded themed](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/icon-title-expanded.png)
+
+When expanded, themed, with avatar
+
+![Expanded avatar](https://raw.githubusercontent.com/avalang-global/AutomationX/main/packages/widgets/images/avatar.png)
 
 ## Building
 

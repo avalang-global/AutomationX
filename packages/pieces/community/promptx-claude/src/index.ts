@@ -4,7 +4,7 @@ import {
   Property,
 } from '@activepieces/pieces-framework';
 import { askClaude } from './lib/actions/ask-claude';
-import { baseUrlMap } from './lib/common/common';
+import { getAccessToken } from './lib/common/common';
 import { extractStructuredDataAction } from './lib/actions/extract-structured-data';
 import { PieceCategory } from '@activepieces/shared';
 
@@ -40,7 +40,7 @@ export const promptxAuth = PieceAuth.CustomAuth({
     }),
   },
   validate: async ({ auth }) => {
-    const { username, password } = auth;
+    const { server, username, password } = auth;
     if (!username || !password) {
       return {
         valid: false,
@@ -48,28 +48,12 @@ export const promptxAuth = PieceAuth.CustomAuth({
       };
     }
 
-    const loginUrl = baseUrlMap[auth.server].loginUrl;
-    const isStaging = auth.server === 'staging';
-    const body = isStaging
-      ? new URLSearchParams({ username, password }).toString()
-      : JSON.stringify({ username, password });
-    const headers = {
-      'Content-Type': isStaging
-        ? 'application/x-www-form-urlencoded'
-        : 'application/json',
-    };
+    const token = await getAccessToken(server, username, password)
 
-    const response = await fetch(loginUrl, {
-      method: 'POST',
-      body,
-      headers,
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
+    if (!token) {
       return {
         valid: false,
-        error: data?.error || data?.message,
+        error: 'Unable to authenticate. Please ensure your credentials are correct',
       };
     }
 
@@ -78,8 +62,9 @@ export const promptxAuth = PieceAuth.CustomAuth({
     };
   },
 });
-export const avalantAnthropicClaude = createPiece({
-  displayName: 'PromptX Claude',
+
+export const promptxAnthropicClaude = createPiece({
+  displayName: 'PromptX Anthropic Claude',
   description:
     'Talk to Anthropic Claude AI using your available PromptX credits. Use the many tools Claude AI has to offer using your PromptX credits per request.',
   auth: promptxAuth,

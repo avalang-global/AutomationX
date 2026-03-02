@@ -4,7 +4,6 @@ import {
   Property,
 } from '@activepieces/pieces-framework';
 import { askOpenAI } from './lib/actions/ask-chatgpt';
-import { askAssistant } from './lib/actions/ask-assistant';
 import { visionPrompt } from './lib/actions/vision-prompt';
 import { extractStructuredDataAction } from './lib/actions/extract-structured-data-from-text';
 import { baseUrlMap } from './lib/common/pmtx-api';
@@ -81,7 +80,7 @@ export const promptxAuth = PieceAuth.CustomAuth({
   },
 });
 
-export const avalantOpenai = createPiece({
+export const promptxOpenai = createPiece({
   displayName: 'PromptX OpenAI',
   description:
     'Talk directly to OpenAI’s ChatGPT using your available PromptX credits. Use the many tools ChatGPT has to offer using your PromptX credits per request.',
@@ -91,6 +90,6 @@ export const avalantOpenai = createPiece({
     'https://ml.oneweb.tech/public_img_main/images/PromptXAI/PromptXAI_0f345f3d9b6743f09e7d3db295973845.png',
   categories: [PieceCategory.ARTIFICIAL_INTELLIGENCE],
   authors: ['rupalbarman'],
-  actions: [askOpenAI, askAssistant, visionPrompt, extractStructuredDataAction],
+  actions: [askOpenAI, visionPrompt, extractStructuredDataAction],
   triggers: [],
 });

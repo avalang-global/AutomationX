@@ -6,11 +6,13 @@ import { propsValidation } from '@activepieces/pieces-common';
 import {
   addTokenUsage,
   getAccessToken,
+  getAiApiKey,
   getStoreData,
   getUsagePlan,
   PromptXAuthType,
 } from '../common/pmtx-api';
 import { billingIssueMessage } from '../common/common';
+import { ChatCompletionMessageParam } from 'openai/resources';
 
 export const visionPrompt = createAction({
   auth: promptxAuth,
@@ -28,30 +30,28 @@ export const visionPrompt = createAction({
       description: 'What do you want ChatGPT to tell you about the image?',
       required: true,
     }),
-    detail: Property.Dropdown({
+    detail: Property.StaticDropdown({
       displayName: 'Detail',
       required: false,
       description:
         'Control how the model processes the image and generates textual understanding.',
       defaultValue: 'auto',
-      refreshers: [],
-      options: async () => {
-        return {
-          options: [
-            {
-              label: 'low',
-              value: 'low',
-            },
-            {
-              label: 'high',
-              value: 'high',
-            },
-            {
-              label: 'auto',
-              value: 'auto',
-            },
-          ],
-        };
+      options: {
+        disabled: false,
+        options: [
+          {
+            label: 'low',
+            value: 'low',
+          },
+          {
+            label: 'high',
+            value: 'high',
+          },
+          {
+            label: 'auto',
+            value: 'auto',
+          },
+        ],
       },
     }),
     temperature: Property.Number({
@@ -98,20 +98,22 @@ export const visionPrompt = createAction({
       ],
     }),
   },
-  async run({ auth, propsValue, project, flows, store }) {
-    const promptxAuth = auth as PromptXAuthType;
-    const accessToken = await getAccessToken(promptxAuth);
-
-    // Get store data
-    const { userId, apiKey } = await getStoreData(
-      store,
-      promptxAuth.server,
-      accessToken
-    );
-
+  async run(context) {
+    const { auth, propsValue, project, flows, store } = context;
     const { temperature, maxTokens, topP, frequencyPenalty, presencePenalty } =
       propsValue;
-    const usage = await getUsagePlan(promptxAuth.server, accessToken);
+    const pxAuth: PromptXAuthType = {
+      server: auth.props.server === 'production' ? 'production' : 'staging',
+      username: auth.props.username,
+      password: auth.props.password,
+    };
+    const accessToken = await getAccessToken(pxAuth);
+    const apiKey = await getAiApiKey(
+      context.server.apiUrl,
+      context.server.token
+    );
+    const usage = await getUsagePlan(pxAuth.server, accessToken);
+    const { userId } = await getStoreData(store, pxAuth.server, accessToken);
 
     // Check token is available
     if (maxTokens && maxTokens > usage.token_available) {
@@ -124,31 +126,41 @@ export const visionPrompt = createAction({
 
     const openai = new OpenAI({ apiKey });
 
-    const rolesArray = propsValue.roles ? (propsValue.roles as any) : [];
-    const roles = rolesArray.map((item: any) => {
-      const rolesEnum = ['system', 'user', 'assistant'];
+    // Add system instructions if set by user
+    const propRoles = propsValue.roles as unknown as {
+      role: string;
+      content: string;
+    }[];
+    const rolesEnum = ['system', 'user', 'assistant'];
+    const systemRoleMessages: ChatCompletionMessageParam[] = [];
+    propRoles.forEach((item) => {
       if (!rolesEnum.includes(item.role)) {
         throw new Error(
           'The only available roles are: [system, user, assistant]'
         );
       }
 
-      return {
-        role: item.role,
+      systemRoleMessages.push({
+        role:
+          item.role === 'system'
+            ? 'system'
+            : item.role === 'user'
+            ? 'user'
+            : 'assistant',
         content: item.content,
-      };
+      });
     });
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        ...roles,
+        ...systemRoleMessages,
         {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: propsValue['prompt'],
+              text: propsValue.prompt,
             },
             {
               type: 'image_url',
@@ -180,7 +192,7 @@ export const visionPrompt = createAction({
           totalTokens: completion.usage?.total_tokens ?? 0,
         },
       },
-      promptxAuth.server,
+      pxAuth.server,
       accessToken
     );
 

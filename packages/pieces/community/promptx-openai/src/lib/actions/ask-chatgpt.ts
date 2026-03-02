@@ -9,7 +9,6 @@ import {
   billingIssueMessage,
   calculateMessagesTokenSize,
   exceedsHistoryLimit,
-  notLLMs,
   reduceContextSize,
 } from '../common/common';
 import { z } from 'zod';
@@ -18,10 +17,13 @@ import {
   addTokenUsage,
   getAccessToken,
   getAiApiKey,
+  getOpenAiModelOptions,
   getStoreData,
   getUsagePlan,
   PromptXAuthType,
 } from '../common/pmtx-api';
+import { APIError } from 'openai/error';
+import { ChatCompletion, ChatCompletionMessageParam } from 'openai/resources';
 
 export const askOpenAI = createAction({
   auth: promptxAuth,
@@ -29,55 +31,15 @@ export const askOpenAI = createAction({
   displayName: 'Ask ChatGPT',
   description: 'Ask ChatGPT anything you want!',
   props: {
-    model: Property.Dropdown({
+    model: Property.StaticDropdown({
       displayName: 'Model',
       required: true,
       description:
         'The model which will generate the completion. Some models are suitable for natural language tasks, others specialize in code.',
-      refreshers: [],
-      defaultValue: 'gpt-3.5-turbo',
-      options: async ({ auth }) => {
-        const promptxAuth = auth as PromptXAuthType;
-        let accessToken: string;
-        let openApiKey: string;
-
-        try {
-          accessToken = await getAccessToken(promptxAuth);
-          openApiKey = await getAiApiKey(promptxAuth.server, accessToken);
-        } catch (error) {
-          console.error(error);
-          return {
-            disabled: true,
-            placeholder: 'Unable to fetch OpenAI key. Check connection',
-            options: [],
-          };
-        }
-
-        try {
-          const openai = new OpenAI({ apiKey: openApiKey });
-          const response = await openai.models.list();
-
-          // We need to get only LLM models
-          const models = response.data.filter(
-            (model) => !notLLMs.includes(model.id)
-          );
-
-          return {
-            disabled: false,
-            options: models.map((model) => {
-              return {
-                label: model.id,
-                value: model.id,
-              };
-            }),
-          };
-        } catch (error) {
-          return {
-            disabled: true,
-            options: [],
-            placeholder: "Couldn't load models, API key is invalid",
-          };
-        }
+      defaultValue: 'gpt-4.1-mini',
+      options: {
+        disabled: false,
+        options: getOpenAiModelOptions(),
       },
     }),
     prompt: Property.LongText({
@@ -89,7 +51,7 @@ export const askOpenAI = createAction({
       required: false,
       description:
         'Controls randomness: Lowering results in less random completions. As the temperature approaches zero, the model will become deterministic and repetitive.',
-      defaultValue: 0.9,
+      defaultValue: 0,
     }),
     maxTokens: Property.Number({
       displayName: 'Maximum Tokens',
@@ -135,34 +97,43 @@ export const askOpenAI = createAction({
     }),
     website: Property.ShortText({
       displayName: 'Website Domains',
-      description: 'Website domains to search (multiple websites separated by commas, e.g., "example.com, github.com"). Leave empty to use regular ChatGPT without web search.',
+      description:
+        'Website domains to search (multiple websites separated by commas, e.g., "example.com, github.com"). Leave empty to use regular ChatGPT without web search.',
       required: false,
     }),
   },
-  async run({ auth, propsValue, store, flows, project }) {
-    const promptxAuth = auth as PromptXAuthType;
-    const accessToken = await getAccessToken(promptxAuth);
-
-    // Get store data
-    const { userId, apiKey } = await getStoreData(
-      store,
-      promptxAuth.server,
-      accessToken
-    );
-
+  async run(context) {
+    const { auth, propsValue, store, project, flows } = context;
     const {
+      prompt,
       model,
-      temperature,
       maxTokens,
+      memoryKey,
+      website,
+      temperature,
       topP,
       frequencyPenalty,
       presencePenalty,
-      prompt,
-      memoryKey,
-      website,
     } = propsValue;
+    const pxAuth: PromptXAuthType = {
+      server: auth.props.server === 'production' ? 'production' : 'staging',
+      username: auth.props.username,
+      password: auth.props.password,
+    };
+    const accessToken = await getAccessToken(pxAuth);
+    const apiKey = await getAiApiKey(
+      context.server.apiUrl,
+      context.server.token
+    );
+    const usage = await getUsagePlan(pxAuth.server, accessToken);
 
-    const usage = await getUsagePlan(promptxAuth.server, accessToken);
+    // Get store data
+    const { userId } = await getStoreData(store, pxAuth.server, accessToken);
+    await propsValidation.validateZod(propsValue, {
+      memoryKey: z.string().max(128).optional(),
+    });
+
+    const openai = new OpenAI({ apiKey });
 
     // Check token is available
     if (maxTokens && maxTokens > usage.token_available) {
@@ -175,9 +146,7 @@ export const askOpenAI = createAction({
       website: z.string().optional(),
     });
 
-    const openai = new OpenAI({ apiKey });
-
-    let messageHistory: any[] | null = [];
+    let messageHistory: ChatCompletionMessageParam[] = [];
 
     // If memory key is set, retrieve messages stored in history
     if (memoryKey) {
@@ -191,22 +160,31 @@ export const askOpenAI = createAction({
     });
 
     // Add system instructions if set by user
-    const rolesArray = propsValue.roles ? (propsValue.roles as any) : [];
-    const roles = rolesArray.map((item: any) => {
-      const rolesEnum = ['system', 'user', 'assistant'];
+    const propRoles = propsValue.roles as unknown as {
+      role: string;
+      content: string;
+    }[];
+    const rolesEnum = ['system', 'user', 'assistant'];
+    const systemRoleMessages: ChatCompletionMessageParam[] = [];
+    propRoles.forEach((item) => {
       if (!rolesEnum.includes(item.role)) {
         throw new Error(
           'The only available roles are: [system, user, assistant]'
         );
       }
 
-      return {
-        role: item.role,
+      systemRoleMessages.push({
+        role:
+          item.role === 'system'
+            ? 'system'
+            : item.role === 'user'
+            ? 'user'
+            : 'assistant',
         content: item.content,
-      };
+      });
     });
 
-    let completion: any;
+    let completion: ChatCompletion;
 
     if (website && website.trim()) {
       // Use web search functionality with responses.create
@@ -219,10 +197,10 @@ export const askOpenAI = createAction({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          input: [...roles, ...messageHistory],
+          input: systemRoleMessages.concat(messageHistory),
           model: model,
           tools: [
             {
@@ -242,42 +220,62 @@ export const askOpenAI = createAction({
 
       if (!response.ok) {
         const errorData = await response.text();
-        throw new Error(`Web search API request failed with status ${response.status}: ${errorData}`);
+        throw new Error(
+          `Web search API request failed with status ${response.status}: ${errorData}`
+        );
       }
 
       const result = await response.json();
 
       // Extract text content from the response output
-      const responseContent = result.output
-        ?.find((item: any) => item.type === 'message')
-        ?.content?.find((content: any) => content.type === 'output_text')
-        ?.text || 'No response content found';
+      const responseContent =
+        result.output
+          ?.find((item: any) => item.type === 'message')
+          ?.content?.find((content: any) => content.type === 'output_text')
+          ?.text || 'No response content found';
 
       // Create a completion object for compatibility using actual usage data
       completion = {
-        choices: [{
-          message: {
-            role: 'assistant',
-            content: responseContent,
-          }
-        }],
+        id: 'dummy',
+        created: 0,
+        model,
+        object: 'chat.completion',
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: responseContent,
+              refusal: null,
+            },
+            logprobs: null,
+            index: 0,
+            finish_reason: 'stop',
+          },
+        ],
         usage: {
           prompt_tokens: result.usage?.input_tokens || 0,
           completion_tokens: result.usage?.output_tokens || 0,
           total_tokens: result.usage?.total_tokens || 0,
-        }
+        },
       };
     } else {
       // Send prompt using regular chat completion
-      completion = await openai.chat.completions.create({
-        model: model,
-        messages: [...roles, ...messageHistory],
-        temperature: temperature,
-        top_p: topP,
-        frequency_penalty: frequencyPenalty,
-        presence_penalty: presencePenalty,
-        max_completion_tokens: Math.floor(maxTokens),
-      });
+      try {
+        completion = await openai.chat.completions.create({
+          model: model,
+          messages: systemRoleMessages.concat(messageHistory),
+          temperature: temperature,
+          top_p: topP,
+          frequency_penalty: frequencyPenalty,
+          presence_penalty: presencePenalty,
+          max_completion_tokens: Math.floor(maxTokens),
+        });
+      } catch (e) {
+        if (e instanceof APIError) {
+          throw new Error(JSON.stringify(e.error));
+        }
+        throw e;
+      }
     }
 
     // Add response to message history
@@ -313,7 +311,7 @@ export const askOpenAI = createAction({
           totalTokens: completion.usage?.total_tokens ?? 0,
         },
       },
-      promptxAuth.server,
+      pxAuth.server,
       accessToken
     );
 

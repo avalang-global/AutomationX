@@ -20,12 +20,17 @@ export const fetchUrls = (
   customAuthUrl?: string,
   customAppUrl?: string
 ) => {
-  const authUrl =
-    customAuthUrl ??
-    (server === 'staging' ? STAGING_AUTH_URL : PRODUCTION_AUTH_URL);
-  const appUrl =
-    customAppUrl ??
-    (server === 'staging' ? STAGING_APP_URL : PRODUCTION_APP_URL);
+  const authUrl = customAuthUrl
+    ? customAuthUrl
+    : server === 'staging'
+    ? STAGING_AUTH_URL
+    : PRODUCTION_AUTH_URL;
+  const appUrl = customAppUrl
+    ? customAppUrl
+    : server === 'staging'
+    ? STAGING_APP_URL
+    : PRODUCTION_APP_URL;
+  console.log(authUrl, appUrl);
   const urlMap = {
     loginUrl: `${authUrl}/center/auth/login`,
     myProfileUrl: `${authUrl}/center/api/v1/users/me`,

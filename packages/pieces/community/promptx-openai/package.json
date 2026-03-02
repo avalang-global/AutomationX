@@ -2,6 +2,7 @@
   "name": "@avalant/piece-promptx-openai",
   "version": "0.0.9",
   "dependencies": {
-    "openai": "4.67.1"
+    "openai": "4.67.1",
+    "tiktoken": "^1.0.22"
   }
 }
