@@ -54,6 +54,7 @@ export const postPhotos = createAction({
       displayName: 'Post Mode',
       description: 'How to post the content',
       required: true,
+      defaultValue: 'DIRECT_POST',
       options: {
         options: [
           { label: 'Direct Post', value: 'DIRECT_POST' },
@@ -105,7 +106,7 @@ export const postPhotos = createAction({
           photo_cover_index: photoCoverIndex ?? 1,
           photo_images: photoImages,
         },
-        post_mode: postMode ?? 'DIRECT_POST',
+        post_mode: postMode,
         media_type: 'PHOTO',
       },
     });

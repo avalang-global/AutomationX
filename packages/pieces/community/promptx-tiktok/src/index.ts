@@ -2,7 +2,7 @@ import { createCustomApiCallAction } from '@activepieces/pieces-common';
 import { createPiece } from '@activepieces/pieces-framework';
 import { postPhotos } from './lib/actions/post-photo';
 import { getPostStatus } from './lib/actions/get-post-status';
-import { tiktokAuth } from './lib/common';
+import { baseUrl, tiktokAuth } from './lib/common';
 
 export const tiktok = createPiece({
   auth: tiktokAuth,
@@ -15,7 +15,7 @@ export const tiktok = createPiece({
     postPhotos,
     getPostStatus,
     createCustomApiCallAction({
-      baseUrl: () => 'https://open.tiktokapis.com/v2',
+      baseUrl: () => baseUrl,
       auth: tiktokAuth,
       authMapping: async (auth) => ({
         Authorization: `Bearer ${auth.access_token}`,

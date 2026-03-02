@@ -85,6 +85,7 @@ async function constructUrl(params: OAuth2PopupParams, pckeChallenge: string) {
   const queryParams: Record<string, string> = {
     response_type: 'code',
     client_id: params.clientId,
+    // todo(Rupal): Required by tiktok piece
     client_key: params.clientId,
     redirect_uri: params.redirectUrl,
     access_type: 'offline',
