@@ -15,12 +15,12 @@ export const tiktok = createPiece({
     postPhotos,
     getPostStatus,
     createCustomApiCallAction({
-        baseUrl: () => 'https://open.tiktokapis.com/v2',
-        auth: tiktokAuth,
-        authMapping: async (auth) => ({
-          Authorization: `Bearer ${auth.access_token}`,
-        }),
+      baseUrl: () => 'https://open.tiktokapis.com/v2',
+      auth: tiktokAuth,
+      authMapping: async (auth) => ({
+        Authorization: `Bearer ${auth.access_token}`,
       }),
+    }),
   ],
   triggers: [],
 });

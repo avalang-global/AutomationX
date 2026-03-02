@@ -11,7 +11,9 @@ export const tiktokAuth = PieceAuth.OAuth2({
   authUrl: 'https://www.tiktok.com/v2/auth/authorize/',
   tokenUrl: 'https://open.tiktokapis.com/v2/oauth/token/',
   required: true,
-  scope: ['video.publish,video.upload,user.info.basic,user.info.profile,video.list'],
+  scope: [
+    'video.publish,video.upload,user.info.basic,user.info.profile,video.list',
+  ],
   pkce: true,
   pkceMethod: 'S256',
 });

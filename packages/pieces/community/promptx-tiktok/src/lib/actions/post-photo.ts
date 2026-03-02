@@ -46,7 +46,8 @@ export const postPhotos = createAction({
     }),
     photoImages: Property.Array({
       displayName: 'Photo URLs',
-      description: 'Array of photo URLs to post (must be from a verified domain in TikTok Developer Portal)',
+      description:
+        'Array of photo URLs to post (must be from a verified domain in TikTok Developer Portal)',
       required: true,
     }),
     postMode: Property.StaticDropdown({

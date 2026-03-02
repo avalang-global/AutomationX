@@ -9,7 +9,8 @@ export const getPostStatus = createAction({
   props: {
     publishId: Property.ShortText({
       displayName: 'Publish ID',
-      description: 'The publish_id received from the post action (e.g. p_pub_url~v2...)',
+      description:
+        'The publish_id received from the post action (e.g. p_pub_url~v2...)',
       required: true,
     }),
   },
