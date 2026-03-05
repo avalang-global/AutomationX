@@ -9,6 +9,10 @@ export const fileProcessor: ProcessorFn = async (_property, urlOrBase64) => {
     if (isNil(urlOrBase64) || !isString(urlOrBase64)) {
         return null
     }
+    // Empty strings are not valid paths
+    if (!urlOrBase64) {
+        return null
+    }
     try {
         const file = handleBase64File(urlOrBase64)
         if (!isNil(file)) {
