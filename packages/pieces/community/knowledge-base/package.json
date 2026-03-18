@@ -1,6 +1,6 @@
 {
   "name": "@avalant/piece-knowledge-base",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "dependencies": {
     "node-fetch": "3.3.2"
   }
