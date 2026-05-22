@@ -1,14 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { t } from 'i18next';
-import { Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { flowsApi } from '@/features/flows/lib/flows-api';
 import { foldersApi } from '@/features/folders/lib/folders-api';
 import { PieceIconList } from '@/features/pieces/components/piece-icon-list';
@@ -22,6 +16,7 @@ import {
 } from '@activepieces/shared';
 
 import { templatesApi } from '../lib/templates-api';
+import { Card } from '@/components/ui/card';
 
 type TemplateCardProps = {
   template: Template;
@@ -74,9 +69,11 @@ export const TemplateCard = ({
   });
 
   return (
-    <div
+    <Card
       key={template.id}
-      className="rounded-lg border border-solid border-dividers overflow-hidden"
+      variant={'interactive'}
+      className="h-[250px] w-full flex flex-col"
+      onClick={() => onSelectTemplate(template)}
     >
       <div className="flex items-center gap-2 p-4">
         <PieceIconList
@@ -96,30 +93,14 @@ export const TemplateCard = ({
       </p>
       <div className="py-2 px-4 gap-1 flex items-center">
         <Button
-          variant="default"
+          variant="outline"
           loading={isPending}
           className="px-2 h-8"
           onClick={() => createFlow(template)}
         >
           {t('Use Template')}
         </Button>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="size-10 flex justify-center items-center">
-              <Button
-                variant="ghost"
-                className="rounded-full p-3 hover:bg-muted cursor-pointer flex justify-center items-center"
-                onClick={() => onSelectTemplate(template)}
-              >
-                <Info className="w-4 h-4" />
-              </Button>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <span className="text-sm">{t('Learn more')}</span>
-          </TooltipContent>
-        </Tooltip>
       </div>
-    </div>
+    </Card>
   );
 };
