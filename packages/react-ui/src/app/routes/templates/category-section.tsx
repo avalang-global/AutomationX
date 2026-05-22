@@ -42,10 +42,11 @@ export const CategorySection = React.memo(
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-medium">{category}</h2>
             <div className="flex items-center">
+              {/*todo(Rupal): button is hidden since we don't have a way to display all templates of a category on demand*/}
               <Button
                 variant="ghost"
                 onClick={() => onCategorySelect(category)}
-                className="flex items-center"
+                className="flex items-center hidden"
               >
                 {t('View all')}
               </Button>
