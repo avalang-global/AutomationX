@@ -84,7 +84,16 @@ export const TemplateCard = ({
           maxNumberOfIconsToShow={2}
         />
       </div>
-      <div className="text-sm font-medium px-4 min-h-16">{template.name}</div>
+      <div className="text-sm font-medium line-clamp-2 px-4 min-h-12">
+        {template.name}
+      </div>
+      <p className="text-muted-foreground text-sm line-clamp-3 px-4">
+        {template.summary ? (
+          template.summary
+        ) : (
+          <span className="italic">{t('No summary')}</span>
+        )}
+      </p>
       <div className="py-2 px-4 gap-1 flex items-center">
         <Button
           variant="default"
