@@ -1,7 +1,12 @@
 import { createAction, Property } from '@activepieces/pieces-framework';
 import { promptxAuth } from '../common/auth';
-import { getAgentXToken, postChatMessage } from '../common/helper';
+import { fetchUrls, getAgentXToken } from '../common/helper';
 import { PromptXAuthType } from '../common/types';
+import {
+  AuthenticationType,
+  httpClient,
+  HttpMethod,
+} from '@activepieces/pieces-common';
 
 export const talkToAgent = createAction({
   auth: promptxAuth,
@@ -27,13 +32,23 @@ export const talkToAgent = createAction({
       server: auth.props.server,
       customAuthUrl: auth.props.customAuthUrl,
       customAppUrl: auth.props.customAppUrl,
-    }
+    };
+    const { server = 'production', customAuthUrl, customAppUrl } = pxAuth;
     const agentXToken = await getAgentXToken(pxAuth);
-    const chatResponse = await postChatMessage(
-      { ...pxAuth, agentXToken },
-      conversationId,
-      message
-    );
-    return chatResponse;
+    const urls = fetchUrls(server, customAuthUrl, customAppUrl);
+    const response = await httpClient.sendRequest({
+      url: `${urls.agentXBaseUrl}/chat`,
+      method: HttpMethod.POST,
+      authentication: {
+        type: AuthenticationType.BEARER_TOKEN,
+        token: agentXToken,
+      },
+      body: JSON.stringify({
+        message,
+        threadId: conversationId,
+      }),
+    });
+
+    return response.body;
   },
 });

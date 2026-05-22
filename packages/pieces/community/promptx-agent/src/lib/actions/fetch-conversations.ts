@@ -1,7 +1,12 @@
 import { createAction, Property } from '@activepieces/pieces-framework';
 import { promptxAuth } from '../common/auth';
-import { fetchConversations, getAgentXToken } from '../common/helper';
+import { fetchUrls, getAgentXToken } from '../common/helper';
 import { PromptXAuthType } from '../common/types';
+import {
+  AuthenticationType,
+  httpClient,
+  HttpMethod,
+} from '@activepieces/pieces-common';
 
 export const fetchConversationsAction = createAction({
   auth: promptxAuth,
@@ -23,12 +28,25 @@ export const fetchConversationsAction = createAction({
       server: auth.props.server,
       customAuthUrl: auth.props.customAuthUrl,
       customAppUrl: auth.props.customAppUrl,
-    }
+    };
+    const { server = 'production', customAuthUrl, customAppUrl } = pxAuth;
     const agentXToken = await getAgentXToken(pxAuth);
-    const conversations = await fetchConversations(
-      { ...pxAuth, agentXToken },
-      propsValue
-    );
-    return conversations;
+    const urls = fetchUrls(server, customAuthUrl, customAppUrl);
+
+    let url = `${urls.agentXBaseUrl}/conversations`;
+    if (propsValue.slug) {
+      url += `?slug=${propsValue.slug}`;
+    }
+
+    const response = await httpClient.sendRequest({
+      url,
+      method: HttpMethod.GET,
+      authentication: {
+        type: AuthenticationType.BEARER_TOKEN,
+        token: agentXToken,
+      },
+    });
+
+    return response.body;
   },
 });

@@ -1,14 +1,16 @@
 import { isNil } from '@activepieces/shared';
-import querystring from 'querystring';
 import {
-  Agent,
   AgentXLoginResponseType,
-  Conversation,
   PromptXAuthType,
   PromptXLoginResponseType,
   PromptXUserResponseType,
   Server,
 } from './types';
+import {
+  AuthenticationType,
+  httpClient,
+  HttpMethod,
+} from '@activepieces/pieces-common';
 
 const STAGING_AUTH_URL = 'https://mocha.centerapp.io';
 const PRODUCTION_AUTH_URL = 'https://centerapp.io';
@@ -49,17 +51,13 @@ export const getAccessToken = async (auth: PromptXAuthType) => {
     password,
   } = auth;
   const urls = fetchUrls(server, customAuthUrl, customAppUrl);
-  const response = await fetch(urls.loginUrl, {
-    method: 'POST',
+  const response = await httpClient.sendRequest<PromptXLoginResponseType>({
+    url: urls.loginUrl,
+    method: HttpMethod.POST,
     body: JSON.stringify({ username, password }),
-    headers: { 'Content-Type': 'application/json' },
   });
-  const data: PromptXLoginResponseType = await response.json();
-  if (response.status !== 200) {
-    throw new Error(data?.error || data?.message);
-  }
-  console.log('[promptx-agent] acquired promptx access token');
-  return data?.access_token;
+
+  return response.body.access_token;
 };
 
 export const getUserProfile = async (auth: PromptXAuthType) => {
@@ -73,18 +71,16 @@ export const getUserProfile = async (auth: PromptXAuthType) => {
     accessToken,
   } = auth;
   const urls = fetchUrls(server, customAuthUrl, customAppUrl);
-  const response = await fetch(urls.myProfileUrl, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
+  const response = await httpClient.sendRequest<PromptXUserResponseType>({
+    url: urls.myProfileUrl,
+    method: HttpMethod.GET,
+    authentication: {
+      type: AuthenticationType.BEARER_TOKEN,
+      token: accessToken,
     },
   });
-  if (response.status !== 200) {
-    throw new Error(`API error: ${response.statusText}`);
-  }
-  console.log('[promptx-agent] acquired promptx user profile');
-  const result: PromptXUserResponseType = await response.json();
-  return result;
+
+  return response.body;
 };
 
 export const getAgentXToken = async (auth: PromptXAuthType) => {
@@ -92,11 +88,12 @@ export const getAgentXToken = async (auth: PromptXAuthType) => {
   const urls = fetchUrls(server, customAuthUrl, customAppUrl);
   const accessToken = await getAccessToken(auth);
   const profile = await getUserProfile({ ...auth, accessToken });
-  const response = await fetch(urls.agentXTokenUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
+  const response = await httpClient.sendRequest<AgentXLoginResponseType>({
+    url: urls.agentXTokenUrl,
+    method: HttpMethod.POST,
+    authentication: {
+      type: AuthenticationType.BEARER_TOKEN,
+      token: accessToken,
     },
     body: JSON.stringify({
       email: profile.email,
@@ -105,12 +102,8 @@ export const getAgentXToken = async (auth: PromptXAuthType) => {
       lastName: profile.lastname,
     }),
   });
-  if (response.status !== 200) {
-    throw new Error(`API error: ${response.statusText}`);
-  }
-  console.log('[promptx-agent] acquired agentx token');
-  const result: AgentXLoginResponseType = await response.json();
-  return result.token;
+
+  return response.body.token;
 };
 
 export const fetchAgents = async (auth: PromptXAuthType) => {
@@ -119,89 +112,14 @@ export const fetchAgents = async (auth: PromptXAuthType) => {
   }
   const { server = 'production', customAuthUrl, customAppUrl } = auth;
   const urls = fetchUrls(server, customAuthUrl, customAppUrl);
-  const baseUrl = `${urls.agentXBaseUrl}/agents`;
-  const response = await fetch(baseUrl, {
-    headers: {
-      Authorization: `Bearer ${auth.agentXToken}`,
+  const response = await httpClient.sendRequest({
+    url: `${urls.agentXBaseUrl}/agents`,
+    method: HttpMethod.GET,
+    authentication: {
+      type: AuthenticationType.BEARER_TOKEN,
+      token: auth.agentXToken,
     },
   });
-  const agents: Agent[] = await response.json();
-  console.log('[promptx-agent] acquired list of agents', agents.length);
-  return agents;
-};
 
-export const fetchConversations = async (
-  auth: PromptXAuthType,
-  params: { slug?: string }
-) => {
-  if (isNil(auth.agentXToken)) {
-    throw new Error('Token is missing to fetch conversations');
-  }
-  const { server = 'production', customAuthUrl, customAppUrl } = auth;
-  const urls = fetchUrls(server, customAuthUrl, customAppUrl);
-  let baseUrl = `${urls.agentXBaseUrl}/conversations`;
-  if (params.slug) {
-    baseUrl += `?${querystring.stringify(params)}`;
-  }
-  const response = await fetch(baseUrl, {
-    headers: {
-      Authorization: `Bearer ${auth.agentXToken}`,
-    },
-  });
-  const conversations: Conversation[] = await response.json();
-  console.log('[promptx-agent] acquired conversations', conversations.length);
-  return conversations;
-};
-
-export const createConversation = async (
-  auth: PromptXAuthType,
-  params: { title: string; agentId: string; slug?: string }
-) => {
-  if (isNil(auth.agentXToken)) {
-    throw new Error('Token is missing to create conversation');
-  }
-  const { server = 'production', customAuthUrl, customAppUrl } = auth;
-  const urls = fetchUrls(server, customAuthUrl, customAppUrl);
-  const baseUrl = `${urls.agentXBaseUrl}/conversations`;
-  const response = await fetch(baseUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${auth.agentXToken}`,
-    },
-    body: JSON.stringify(params),
-  });
-  if (response.status !== 200) {
-    throw new Error(`API error: ${response.statusText}`);
-  }
-  const conversation: Conversation = await response.json();
-  console.log('[promptx-agent] created conversation', conversation.id);
-  return conversation;
-};
-
-export const postChatMessage = async (
-  auth: PromptXAuthType,
-  threadId: string,
-  message: string
-) => {
-  if (isNil(auth.agentXToken)) {
-    throw new Error('Token is missing to post chat message');
-  }
-  const { server = 'production', customAuthUrl, customAppUrl } = auth;
-  const urls = fetchUrls(server, customAuthUrl, customAppUrl);
-  const baseUrl = `${urls.agentXBaseUrl}/chat`;
-  const response = await fetch(baseUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${auth.agentXToken}`,
-    },
-    body: JSON.stringify({ message, threadId }),
-  });
-  if (response.status !== 200) {
-    throw new Error(`API error: ${response.statusText}`);
-  }
-  const chatResponse: string = await response.text();
-  console.log('[promptx-agent] received chat response');
-  return chatResponse;
+  return response.body;
 };
