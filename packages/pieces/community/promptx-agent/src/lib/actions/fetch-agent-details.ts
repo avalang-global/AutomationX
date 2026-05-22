@@ -1,30 +1,19 @@
 import { createAction, Property } from '@activepieces/pieces-framework';
 import { promptxAuth } from '../common/auth';
-import { fetchAgents, fetchUrls, getAgentXToken } from '../common/helper';
 import { Agent, PromptXAuthType } from '../common/types';
+import { fetchAgents, fetchUrls, getAgentXToken } from '../common/helper';
 import {
   AuthenticationType,
   httpClient,
   HttpMethod,
 } from '@activepieces/pieces-common';
 
-export const createConversationAction = createAction({
+export const fetchAgentDetails = createAction({
   auth: promptxAuth,
-  name: 'createConversation',
-  displayName: 'Create Conversation',
-  description: 'Create a new conversation with an agent',
+  name: 'fetchAgentDetails',
+  displayName: 'Fetch Agent Details',
+  description: 'Fetch information of an agent - their role, persona and tools',
   props: {
-    title: Property.ShortText({
-      displayName: 'Title',
-      description: 'Conversation title',
-      required: true,
-    }),
-    slug: Property.ShortText({
-      displayName: 'Slug',
-      description:
-        'Conversation slug / key which can be used to ensure a single conversation is used while interacting with the agent',
-      required: false,
-    }),
     agentId: Property.Dropdown({
       auth: promptxAuth,
       displayName: 'Agent',
@@ -74,13 +63,12 @@ export const createConversationAction = createAction({
     const agentXToken = await getAgentXToken(pxAuth);
     const urls = fetchUrls(server, customAuthUrl, customAppUrl);
     const response = await httpClient.sendRequest({
-      url: `${urls.agentXBaseUrl}/conversations`,
-      method: HttpMethod.POST,
+      url: `${urls.agentXBaseUrl}/agents/${propsValue.agentId}`,
+      method: HttpMethod.GET,
       authentication: {
         type: AuthenticationType.BEARER_TOKEN,
         token: agentXToken,
       },
-      body: JSON.stringify(propsValue),
     });
 
     return response.body;
