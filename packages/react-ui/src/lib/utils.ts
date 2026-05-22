@@ -10,6 +10,8 @@ import { LocalesEnum, Permission } from '@activepieces/shared';
 
 import { authenticationSession } from './authentication-session';
 
+export const DASHBOARD_CONTENT_PADDING_X = 'px-4';
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
