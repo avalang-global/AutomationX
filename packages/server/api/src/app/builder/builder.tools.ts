@@ -216,6 +216,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 log.info('updated version for create-trigger')
 
                 return {
+                    status: ToolExecutionStatus.SUCCESS,
                     text: `Updated flow with trigger ${pieceTriggerName}`,
                 }
             },
@@ -400,6 +401,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                     operation,
                 })
                 return {
+                    status: ToolExecutionStatus.SUCCESS,
                     text: `Moved action ${stepName} under ${parentStepName}`,
                 }
             },
@@ -430,6 +432,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
 
                 log.info('updated version for remove-action')
                 return {
+                    status: ToolExecutionStatus.SUCCESS,
                     text: `Updated flow, removed actions ${actionNames}`,
                 }
             },
@@ -499,6 +502,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 })
 
                 return {
+                    status: ToolExecutionStatus.SUCCESS,
                     text: `Updated step ${stepName} with ${JSON.stringify({ pieceName, pieceVersion, pieceActionName })}`,
                 }
             },
@@ -554,6 +558,7 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
 
                 log.info('updated version for add-router-action')
                 return {
+                    status: ToolExecutionStatus.SUCCESS,
                     text: `Added a router ${stepName} with two branches "Branch 1" and "Otherwise"`,
                 }
             },
