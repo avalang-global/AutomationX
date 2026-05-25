@@ -17,6 +17,7 @@ import {
     PieceTrigger,
     RouterExecutionType,
     StepLocationRelativeToParent,
+    UpdateActionRequest,
 } from '@activepieces/shared'
 import { Tool, tool } from 'ai'
 import { z } from 'zod'
@@ -430,6 +431,75 @@ export const buildBuilderTools = ({ userId, projectId, platformId, flowId, flowV
                 log.info('updated version for remove-action')
                 return {
                     text: `Updated flow, removed actions ${actionNames}`,
+                }
+            },
+        }),
+        [BuilderToolName.UPDATE_ACTION]: tool({
+            description: 'Update or replace an existing action step in the flow',
+            inputSchema: z.object({
+                stepName: z.string().meta({ description: 'step name of the action to be updated (eg. step_1, step_2 etc.)' }),
+                pieceName: z.string().meta({ description: 'new piece name' }),
+                pieceVersion: z.string().meta({ description: 'new piece version' }),
+                pieceActionName: z.string().meta({ description: 'new piece action name' }),
+            }),
+            execute: async (params) => {
+                log.info(params, 'update-action params')
+
+                const { stepName, pieceName, pieceVersion, pieceActionName } = params
+                const flowVersion = await flowVersionService(log).getOne(flowVersionId)
+                if (isNil(flowVersion)) {
+                    return {
+                        status: ToolExecutionStatus.FAILURE,
+                        text: 'Unable to find flow with specified version',
+                    }
+                }
+
+                const step = flowStructureUtil.getStep(stepName, flowVersion.trigger)
+                if (isNil(step)) {
+                    return {
+                        status: ToolExecutionStatus.FAILURE,
+                        text: `Unable to find step ${stepName}`,
+                    }
+                }
+
+                // Fetch metadata and piece action
+                const metadata = await pieceMetadataService(log).getOrThrow({ name: pieceName, version: pieceVersion, platformId, projectId })
+                const pieceAction = metadata?.actions[pieceActionName]
+
+                // Fetch default input parameters to the piece step
+                const input = getInitalStepInputForActionOrTrigger(pieceAction)
+                const propertySettings = getDefaultPropertySettingsForActionOrTrigger(pieceAction)
+
+                const request: UpdateActionRequest = {
+                    type: FlowActionType.PIECE,
+                    name: stepName,
+                    valid: true,
+                    displayName: pieceAction.displayName,
+                    settings: {
+                        pieceName,
+                        pieceVersion,
+                        actionName: pieceActionName,
+                        input,
+                        propertySettings,
+                        errorHandlingOptions: {},
+                    },
+                }
+                const operation: FlowOperationRequest = {
+                    type: FlowOperationType.UPDATE_ACTION,
+                    request,
+                }
+
+                await applyAndSaveFlowVersion({
+                    userId,
+                    projectId,
+                    platformId,
+                    flowId,
+                    flowVersionId,
+                    operation,
+                })
+
+                return {
+                    text: `Updated step ${stepName} with ${JSON.stringify({ pieceName, pieceVersion, pieceActionName })}`,
                 }
             },
         }),
