@@ -5,6 +5,7 @@ export enum BuilderToolName {
     ADD_ACTION = 'add-bulk-actions',
     MOVE_ACTION = 'move-action',
     REMOVE_ACTION = 'remove-action',
+    UPDATE_ACTION = 'update-action',
     ADD_ROUTER = 'add-router',
     ADD_BRANCH = 'add-branch',
     REMOVE_BRANCH = 'remove-branch',
