@@ -6,7 +6,6 @@ import { LoadingSpinner } from '@/components/ui/spinner';
 import { useAuthorization } from '@/hooks/authorization-hooks';
 import {
   FlowStatus,
-  FlowStatusUpdatedResponse,
   Permission,
   PopulatedFlow,
   isNil,
@@ -43,8 +42,8 @@ const FlowStatusToggle = ({ flow }: FlowStatusToggleProps) => {
     flowHooks.useChangeFlowStatus({
       flowId: flow.id,
       change: isFlowPublished ? FlowStatus.DISABLED : FlowStatus.ENABLED,
-      onSuccess: (response: FlowStatusUpdatedResponse) => {
-        setIsFlowPublished(response.flow.status === FlowStatus.ENABLED);
+      onSuccess: (updatedFlow: PopulatedFlow) => {
+        setIsFlowPublished(updatedFlow.status === FlowStatus.ENABLED);
       },
     });
 

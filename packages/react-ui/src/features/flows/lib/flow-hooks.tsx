@@ -11,6 +11,7 @@ import { pieceSelectorUtils } from '@/features/pieces/lib/piece-selector-utils';
 import { piecesApi } from '@/features/pieces/lib/pieces-api';
 import { stepUtils } from '@/features/pieces/lib/step-utils';
 import { flagsHooks } from '@/hooks/flags-hooks';
+import { api } from '@/lib/api';
 import { authenticationSession } from '@/lib/authentication-session';
 import { downloadFile } from '@/lib/utils';
 import {
@@ -24,10 +25,8 @@ import {
   PopulatedFlow,
   FlowTrigger,
   FlowTriggerType,
-  WebsocketClientEvent,
-  FlowStatusUpdatedResponse,
-  isNil,
   ErrorCode,
+  ApErrorParams,
 } from '@activepieces/shared';
 
 import { flowsApi } from './flows-api';
@@ -61,53 +60,60 @@ export const flowHooks = {
     const { data: enableFlowOnPublish } = flagsHooks.useFlag<boolean>(
       ApFlagId.ENABLE_FLOW_ON_PUBLISH,
     );
-    const socket = useSocket();
+    const { data: triggerTimeout } = flagsHooks.useFlag<number>(
+      ApFlagId.TRIGGER_TIMEOUT_SECONDS,
+    );
     const { openDialog } = useApErrorDialogStore();
     return useMutation({
       mutationFn: async () => {
         if (change === 'publish') {
           setIsPublishing?.(true);
         }
-        return await new Promise<FlowStatusUpdatedResponse>(
-          (resolve, reject) => {
-            const onUpdateFinish = (response: FlowStatusUpdatedResponse) => {
-              if (response.flow.id !== flowId) {
-                return;
-              }
-              socket.off(
-                WebsocketClientEvent.FLOW_STATUS_UPDATED,
-                onUpdateFinish,
-              );
-              resolve(response);
-            };
-            socket.on(WebsocketClientEvent.FLOW_STATUS_UPDATED, onUpdateFinish);
-            flowsApi
-              .update(flowId, {
-                type:
-                  change === 'publish'
-                    ? FlowOperationType.LOCK_AND_PUBLISH
-                    : FlowOperationType.CHANGE_STATUS,
-                request: {
-                  status:
-                    change === 'publish'
-                      ? enableFlowOnPublish
-                        ? FlowStatus.ENABLED
-                        : FlowStatus.DISABLED
-                      : change,
-                },
-              })
-              .then(() => {})
-              .catch((error) => {
-                reject(error);
-              });
+        return flowsApi.update(flowId, {
+          type:
+            change === 'publish'
+              ? FlowOperationType.LOCK_AND_PUBLISH
+              : FlowOperationType.CHANGE_STATUS,
+          request: {
+            status:
+              change === 'publish'
+                ? enableFlowOnPublish
+                  ? FlowStatus.ENABLED
+                  : FlowStatus.DISABLED
+                : change,
           },
-        );
+        });
       },
-      onSuccess: (response: FlowStatusUpdatedResponse) => {
+      onSuccess: (flow: PopulatedFlow) => {
         if (change === 'publish') {
           setIsPublishing?.(false);
         }
-        if (!isNil(response.error)) {
+        onSuccess?.(flow);
+      },
+      onError: (error: unknown) => {
+        if (change === 'publish') {
+          setIsPublishing?.(false);
+        }
+        if (!api.isError(error)) {
+          internalErrorToast();
+          return;
+        }
+        if (
+          !error.response ||
+          error.response.status === api.httpStatus.GatewayTimeout
+        ) {
+          toast.error(t('Request Timed Out'), {
+            description: t(
+              'The operation exceeded the {timeout} second timeout. Please refresh and try again.',
+              { timeout: triggerTimeout ?? 60 },
+            ),
+            duration: 5000,
+          });
+          return;
+        }
+        const apError = error.response.data as ApErrorParams;
+        if (apError.code === ErrorCode.TRIGGER_UPDATE_STATUS) {
+          const params = apError.params as Record<string, string>;
           openDialog({
             title:
               change === 'publish'
@@ -121,25 +127,9 @@ export const flowHooks = {
               </p>
             ),
             error: {
-              standardError: response.error.params.standardError,
-              standardOutput: response.error.params.standardOutput || '',
+              standardError: params.standardError || '',
+              standardOutput: params.standardOutput || '',
             },
-          });
-          return;
-        }
-        onSuccess?.(response);
-      },
-      onError: (error: unknown) => {
-        const errorCode = (error as any)?.response?.data?.code;
-        const errorMessage = (error as any)?.response?.data?.params?.message;
-
-        if (
-          errorCode === ErrorCode.FLOW_OPERATION_IN_PROGRESS &&
-          errorMessage
-        ) {
-          toast.error(t('Flow Is Busy'), {
-            description: errorMessage,
-            duration: 5000,
           });
         } else {
           internalErrorToast();
@@ -287,6 +277,6 @@ export const flowHooks = {
 type UseChangeFlowStatusParams = {
   flowId: string;
   change: 'publish' | FlowStatus;
-  onSuccess: (flow: FlowStatusUpdatedResponse) => void;
+  onSuccess: (flow: PopulatedFlow) => void;
   setIsPublishing?: (isPublishing: boolean) => void;
 };
