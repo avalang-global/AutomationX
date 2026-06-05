@@ -11,7 +11,7 @@ import {
 import { flowHooks } from '@/features/flows/lib/flow-hooks';
 import { useAuthorization } from '@/hooks/authorization-hooks';
 import {
-  FlowStatusUpdatedResponse,
+  PopulatedFlow,
   FlowVersionState,
   Permission,
 } from '@activepieces/shared';
@@ -47,9 +47,9 @@ const PublishButton = () => {
   const { mutate: publish } = flowHooks.useChangeFlowStatus({
     flowId: flow.id,
     change: 'publish',
-    onSuccess: (response: FlowStatusUpdatedResponse) => {
-      setFlow(response.flow);
-      setVersion(response.flow.version);
+    onSuccess: (updatedFlow: PopulatedFlow) => {
+      setFlow(updatedFlow);
+      setVersion(updatedFlow.version);
       toast.success(t('Your flow is now published.'), {
         duration: 3000,
       });

@@ -1,4 +1,4 @@
-import { Flow, FlowId, FlowStatus, ProjectId } from '@activepieces/shared'
+import { Flow } from '@activepieces/shared'
 import { Job, JobsOptions } from 'bullmq'
 import { Dayjs } from 'dayjs'
 
@@ -9,20 +9,12 @@ export enum SystemJobName {
     TRIAL_TRACKER = 'trial-tracker',
     RUN_TELEMETRY = 'run-telemetry',
     DELETE_FLOW = 'delete-flow',
-    UPDATE_FLOW_STATUS = 'update-flow-status',
 }
 
 type DeleteFlowDurableSystemJobData =  {
     flow: Flow
     preDeleteDone: boolean
     dbDeleteDone: boolean
-}
-
-type UpdateFlowStatusDurableSystemJobData =  {
-    id: FlowId
-    projectId: ProjectId
-    newStatus: FlowStatus
-    preUpdateDone: boolean
 }
 
 type SystemJobDataMap = {
@@ -32,7 +24,6 @@ type SystemJobDataMap = {
     [SystemJobName.RUN_TELEMETRY]: Record<string, never>
     [SystemJobName.TRIAL_TRACKER]: Record<string, never>
     [SystemJobName.DELETE_FLOW]: DeleteFlowDurableSystemJobData
-    [SystemJobName.UPDATE_FLOW_STATUS]: UpdateFlowStatusDurableSystemJobData
 }
 
 export type SystemJobData<T extends SystemJobName = SystemJobName> = T extends SystemJobName ? SystemJobDataMap[T] : never
