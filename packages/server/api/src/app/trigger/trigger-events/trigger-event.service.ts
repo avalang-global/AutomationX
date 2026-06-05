@@ -93,7 +93,7 @@ export const triggerEventService = (log: FastifyBaseLogger) => ({
                     throw new ActivepiecesError({
                         code: ErrorCode.TEST_TRIGGER_FAILED,
                         params: {
-                            message: engineResponse.result.message!,
+                            message: engineResponse.result.message ?? 'Unknown trigger error',
                         },
                     })
                 }

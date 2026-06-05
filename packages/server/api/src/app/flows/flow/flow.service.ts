@@ -1,7 +1,8 @@
-import { apDayjs, apDayjsDuration } from '@activepieces/server-shared'
+import { apDayjs, apDayjsDuration, AppSystemProp } from '@activepieces/server-shared'
 import {
     ActivepiecesError,
     apId,
+    assertNotNullOrUndefined,
     CreateFlowRequest,
     Cursor,
     ErrorCode,
@@ -33,10 +34,12 @@ import dayjs from 'dayjs'
 import { FastifyBaseLogger } from 'fastify'
 import { EntityManager, In, IsNull, Not } from 'typeorm'
 import { transaction } from '../../core/db/transaction'
+import { distributedLock } from '../../database/redis-connections'
 import { buildPaginator } from '../../helper/pagination/build-paginator'
 import { paginationHelper } from '../../helper/pagination/pagination-utils'
 import Paginator, { Order } from '../../helper/pagination/paginator'
-import { SystemJobData, SystemJobName } from '../../helper/system-jobs/common'
+import { system } from '../../helper/system/system'
+import { SystemJobName } from '../../helper/system-jobs/common'
 import { systemJobsSchedule } from '../../helper/system-jobs/system-job'
 import { telemetry } from '../../helper/telemetry.utils'
 import { projectService } from '../../project/project-service'
@@ -45,6 +48,7 @@ import { flowVersionMigrationService } from '../flow-version/flow-version-migrat
 import { flowVersionRepo, flowVersionService } from '../flow-version/flow-version.service'
 import { flowFolderService } from '../folder/folder.service'
 import { flowExecutionCache } from './flow-execution-cache'
+import { flowSideEffects } from './flow-service-side-effects'
 import { FlowEntity } from './flow.entity'
 import { flowRepo } from './flow.repo'
 
@@ -349,26 +353,12 @@ export const flowService = (log: FastifyBaseLogger) => ({
                     projectId,
                     platformId,
                 })
-                await flowRepo().update(id, {
-                    operationStatus: operation.request.status === FlowStatus.ENABLED ? FlowOperationStatus.ENABLING : FlowOperationStatus.DISABLING,
-                })
-                await this.addUpdateStatusJob({
-                    id,
-                    projectId,
-                    newStatus: operation.request.status ?? FlowStatus.ENABLED,
-                })
+                await applyStatusChange({ id, projectId, newStatus: operation.request.status ?? FlowStatus.ENABLED }, log)
                 break
             }
 
             case FlowOperationType.CHANGE_STATUS: {
-                await flowRepo().update(id, {
-                    operationStatus: operation.request.status === FlowStatus.ENABLED ? FlowOperationStatus.ENABLING : FlowOperationStatus.DISABLING,
-                })
-                await this.addUpdateStatusJob({
-                    id,
-                    projectId,
-                    newStatus: operation.request.status,
-                })
+                await applyStatusChange({ id, projectId, newStatus: operation.request.status }, log)
                 break
             }
 
@@ -627,30 +617,6 @@ export const flowService = (log: FastifyBaseLogger) => ({
             },
         })
     },
-    
-    addUpdateStatusJob: async (data: Omit<SystemJobData<SystemJobName.UPDATE_FLOW_STATUS>, 'preUpdateDone'>): Promise<void> => {
-        await systemJobsSchedule(log).upsertJob({
-            job: {
-                name: SystemJobName.UPDATE_FLOW_STATUS,
-                data: {
-                    ...data,
-                    preUpdateDone: false,
-                },
-                jobId: `update-flow-status-${data.id}`,
-                
-            },
-            schedule: {
-                type: 'one-time',
-                date: apDayjs(),
-            },
-            customConfig: {
-                backoff: {
-                    type: 'exponential',
-                    delay: apDayjsDuration(5, 'second').asMilliseconds(),
-                },
-            },
-        })
-    },
 })
 
 
@@ -678,6 +644,48 @@ const lockFlowVersionIfNotLocked = async ({
             },
         },
         entityManager,
+    })
+}
+
+// Refer to upstream change b5bac3b9869c9875e71f2a89ffb0f90f5849bd28
+async function applyStatusChange(params: {
+    id: FlowId
+    projectId: ProjectId
+    newStatus: FlowStatus
+}, log: FastifyBaseLogger): Promise<void> {
+    const triggerTimeout = system.getNumberOrThrow(AppSystemProp.TRIGGER_TIMEOUT_SECONDS)
+    await distributedLock(log).runExclusive({
+        key: `flow-status-change-${params.id}`,
+        timeoutInSeconds: triggerTimeout + 30,
+        fn: async () => {
+            const flowToUpdate = await flowService(log).getOneOrThrow({
+                id: params.id,
+                projectId: params.projectId,
+            })
+            if (flowToUpdate.status === params.newStatus) {
+                return
+            }
+
+            const publishedFlowVersionId = flowToUpdate.publishedVersionId
+            assertNotNullOrUndefined(publishedFlowVersionId, 'publishedFlowVersionId is required')
+            const publishedFlowVersion = await flowVersionService(log).getFlowVersionOrThrow({
+                flowId: flowToUpdate.id,
+                versionId: publishedFlowVersionId,
+            })
+
+            await flowSideEffects(log).preUpdateStatus({
+                flowToUpdate,
+                publishedFlowVersion,
+                newStatus: params.newStatus,
+            })
+
+            await flowRepo().save({
+                ...flowToUpdate,
+                status: params.newStatus,
+                publishedVersionId: publishedFlowVersion.id,
+            })
+            await flowExecutionCache(log).invalidate(params.id)
+        },
     })
 }
 
