@@ -647,7 +647,7 @@ const lockFlowVersionIfNotLocked = async ({
     })
 }
 
-// Refer to upstream change b5bac3b9869c9875e71f2a89ffb0f90f5849bd28
+// Refer to upstream commit b5bac3b9869c9875e71f2a89ffb0f90f5849bd28
 async function applyStatusChange(params: {
     id: FlowId
     projectId: ProjectId
