@@ -26,7 +26,7 @@ export const HelpAndFeedback = () => {
       <DropdownMenuSubContent className="w-[220px]">
         <DropdownMenuItem asChild>
           <Link
-            to="https://activepieces.com/docs"
+            to="https://promptx.gitbook.io/promptx"
             target="_blank"
             rel="noopener noreferrer"
             className="flex justify-between w-full"
@@ -38,7 +38,7 @@ export const HelpAndFeedback = () => {
           </Link>
         </DropdownMenuItem>
 
-        <DropdownMenuItem asChild>
+        {/*<DropdownMenuItem asChild>
           <Link
             to="https://github.com/activepieces/activepieces/releases"
             target="_blank"
@@ -50,7 +50,7 @@ export const HelpAndFeedback = () => {
               <span>{t('Changelog')}</span>
             </div>
           </Link>
-        </DropdownMenuItem>
+        </DropdownMenuItem>*/}
 
         {showCommunity && (
           <>
