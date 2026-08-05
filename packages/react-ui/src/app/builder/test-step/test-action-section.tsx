@@ -1,5 +1,5 @@
 import { t } from 'i18next';
-import React, { useContext, useRef, useState } from 'react';
+import React, { useContext, useRef, useState, useEffect } from 'react'; // May: Added useEffect import
 
 import { Button } from '@/components/ui/button';
 import { Dot } from '@/components/ui/dot';
@@ -25,6 +25,9 @@ import TestWebhookDialog from './custom-test-step/test-webhook-dialog';
 import { TestSampleDataViewer } from './test-sample-data-viewer';
 import { TestButtonTooltip } from './test-step-tooltip';
 import { testStepHooks } from './utils/test-step-hooks';
+// May: Import socket hook to check connection status
+import { useSocket } from '@/components/socket-provider';
+
 type TestActionComponentProps = {
   isSaving: boolean;
   flowVersionId: string;
@@ -76,6 +79,15 @@ const TestStepSectionImplementation = React.memo(
     const [liveAgentResult, setLiveAgentResult] = useState<
       AgentResult | undefined
     >(undefined);
+    
+    // May: Get socket instance to check connection status
+    const socket = useSocket();
+    
+    // May: State for polling fallback when WebSocket fails
+    const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+    // May: Store todo ID separately to retry fetching even if WebSocket event is lost
+    const [pendingTodoId, setPendingTodoId] = useState<string | null>(null);
+    
     const { mutate: testAction, isPending: isWatingTestResult } =
       testStepHooks.useTestAction({
         mutationKey,
@@ -84,6 +96,7 @@ const TestStepSectionImplementation = React.memo(
         setConsoleLogs,
         onSuccess: () => {
           setTodo(null);
+          setPendingTodoId(null); // May: Clear pending todo ID on success
         },
       });
 
@@ -91,16 +104,72 @@ const TestStepSectionImplementation = React.memo(
     const lastTestDate = currentStep.settings.sampleData?.lastTestDate;
     const sampleDataExists = !isNil(lastTestDate) || !isNil(errorMessage);
 
+    // May: Cleanup polling on unmount
+    useEffect(() => {
+      return () => {
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+        }
+      };
+    }, [pollingInterval]);
+
+    // May: Poll for todo when we have a pending ID but no todo yet
+    // This is the fallback when WebSocket events are lost
+    useEffect(() => {
+      if (pendingTodoId && !todo) {
+        console.log('📋 May: Starting polling fallback for todo ID:', pendingTodoId);
+        
+        let pollCount = 0;
+        const interval = setInterval(async () => {
+          pollCount++;
+          console.log(`📋 May: Polling attempt #${pollCount} for todo:`, pendingTodoId);
+          
+          try {
+            const todoData = await todosApi.get(pendingTodoId);
+            if (todoData) {
+              console.log('✅ May: Todo found via polling after', pollCount, 'attempts');
+              setTodo(todoData);
+              setPendingTodoId(null); // May: Clear pending ID once we have the todo
+              clearInterval(interval);
+              setPollingInterval(null);
+            }
+          } catch (error) {
+            // May: Todo not ready yet, will retry on next interval
+            console.log(`📋 May: Polling attempt #${pollCount} failed - todo not ready yet`);
+          }
+        }, 2000); // May: Poll every 2 seconds
+
+        setPollingInterval(interval);
+      }
+    }, [pendingTodoId, todo]);
+
     const handleTodoTest = async () => {
+      // May: Log WebSocket connection status for debugging
+      console.log('🚀 May: Starting todo test, WebSocket connected:', socket?.connected);
+      
       setActiveDialog(DialogType.TODO_CREATE_TASK);
+      
       testAction({
         type: 'todoAction',
         onProgress: async (progress: StepRunResponse) => {
+          // May: This only runs if WebSocket event arrives
+          console.log('📨 May: WebSocket onProgress received:', progress);
+          
           if (progress.success) {
             const todoId = getTodoIdFromStepRunResponse(progress);
+            console.log('📨 May: Extracted todoId from WebSocket:', todoId);
+            
             if (todoId) {
-              const todo = await todosApi.get(todoId);
-              setTodo(todo);
+              try {
+                // May: Try to fetch immediately
+                const todo = await todosApi.get(todoId);
+                console.log('✅ May: Todo fetched immediately via WebSocket:', todo);
+                setTodo(todo);
+              } catch (error) {
+                // May: If immediate fetch fails, start polling as fallback
+                console.log('⚠️ May: Immediate fetch failed, starting polling fallback for todo:', todoId);
+                setPendingTodoId(todoId);
+              }
             } else {
               setErrorMessage(
                 `${t(`Can't find todo ID in the response`)} ${JSON.stringify(
@@ -110,8 +179,12 @@ const TestStepSectionImplementation = React.memo(
             }
           }
         },
+        onFinish: () => {
+          console.log('🏁 May: Test action finished');
+        },
       });
     };
+    
     const handleAgentTest = async () => {
       testAction({
         type: 'agentAction',
@@ -141,11 +214,19 @@ const TestStepSectionImplementation = React.memo(
     };
 
     const handleCloseDialog = () => {
-      console.log('handleCloseDialog');
+      console.log('❌ May: Closing dialog');
       setActiveDialog(DialogType.NONE);
       setTodo(null);
+      setPendingTodoId(null); // May: Clear pending todo ID
       abortControllerRef.current.abort();
       setMutationKey([Date.now().toString()]);
+      
+      // May: Clear polling interval when dialog closes
+      if (pollingInterval) {
+        console.log('❌ May: Clearing polling interval');
+        clearInterval(pollingInterval);
+        setPollingInterval(null);
+      }
     };
 
     const isTesting = activeDialog !== DialogType.NONE || isWatingTestResult;
